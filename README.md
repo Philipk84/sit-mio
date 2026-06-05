@@ -80,7 +80,7 @@ gradle --offline :bus-simulator:run
 
 Por defecto el simulador representa un solo bus de una sola ruta, queda en ciclo continuo (`MIO_BUS_LOOP=true`) y reenvia los puntos GPS de esa ruta con timestamp incremental para que el marcador se mueva y se puedan calcular velocidades.
 
-El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva su propio rastro de posiciones GPS recibidas; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema tambien renderiza detalle de ruta (`routeDetails`), paradas fijas por `stopId` y un trazado base. La posicion de cada parada se estima usando el `odometer` del datagrama, que segun el diccionario de datos representa los metros recorridos desde la ultima parada hasta la ubicacion actual del bus. No corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
+El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva rastros separados por bus para no intercalar posiciones cuando dos buses estan en la misma linea; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema tambien renderiza detalle de ruta (`routeDetails`), paradas fijas por `stopId` y un trazado base. La posicion de cada parada se estima usando el `odometer` del datagrama, que segun el diccionario de datos representa los metros recorridos desde la ultima parada hasta la ubicacion actual del bus. No corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
 
 Para correr varios buses/rutas, abre una terminal por nodo simulado:
 
@@ -103,6 +103,28 @@ gradle --offline :bus-simulator:run
 $env:MIO_SIM_LINE_ID='2471'
 $env:MIO_SIM_BUS_ID='9003'
 $env:MIO_SOURCE_BUS_ID='255'
+gradle --offline :bus-simulator:run
+```
+
+Para probar dos buses diferentes al mismo tiempo en la misma ruta, abre dos terminales y usa la misma `MIO_SIM_LINE_ID` con distinto `MIO_SIM_BUS_ID` y distinto `MIO_SOURCE_BUS_ID`. Ejemplo con la ruta `306` (`A06`):
+
+Terminal A:
+
+```powershell
+$env:MIO_BUS_DELAY_MS='250'
+$env:MIO_SIM_LINE_ID='306'
+$env:MIO_SIM_BUS_ID='9101'
+$env:MIO_SOURCE_BUS_ID='1203'
+gradle --offline :bus-simulator:run
+```
+
+Terminal B:
+
+```powershell
+$env:MIO_BUS_DELAY_MS='250'
+$env:MIO_SIM_LINE_ID='306'
+$env:MIO_SIM_BUS_ID='9102'
+$env:MIO_SOURCE_BUS_ID='190'
 gradle --offline :bus-simulator:run
 ```
 

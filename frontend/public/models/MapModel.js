@@ -9,7 +9,7 @@ export class MapModel extends ObservableModel {
       selectedLineId: 0,
       positions: [],
       routeDetails: null,
-      routeTrails: new Map(),
+      routeTrailsByBus: new Map(),
       stale: false,
       lastChangedAt: 0,
       status: 'Conectando con CCO...'
@@ -97,7 +97,9 @@ export class MapModel extends ObservableModel {
   appendTrails(positions) {
     for (const position of positions) {
       const lineId = Number(position.lineId);
-      const trail = this.state.routeTrails.get(lineId) || [];
+      const busId = Number(position.busId);
+      const trailsByBus = this.state.routeTrailsByBus.get(lineId) || new Map();
+      const trail = trailsByBus.get(busId) || [];
       const latLng = { lat: position.latitude, lng: position.longitude };
       const last = trail[trail.length - 1];
       if (!last || last.lat !== latLng.lat || last.lng !== latLng.lng) {
@@ -105,7 +107,8 @@ export class MapModel extends ObservableModel {
         if (trail.length > 900) {
           trail.shift();
         }
-        this.state.routeTrails.set(lineId, trail);
+        trailsByBus.set(busId, trail);
+        this.state.routeTrailsByBus.set(lineId, trailsByBus);
       }
     }
   }

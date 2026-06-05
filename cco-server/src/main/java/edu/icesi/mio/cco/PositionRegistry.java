@@ -7,6 +7,7 @@ import Mio.Station;
 import edu.icesi.mio.common.Geo;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -14,8 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 final class PositionRegistry {
     private final Map<Integer, Position> latestByBus = new ConcurrentHashMap<>();
-    private final Map<Integer, List<Position>> trailByRoute = new ConcurrentHashMap<>();
-    private final Map<Integer, Station> stopsById = new ConcurrentHashMap<>();
+    private final Map<Integer, Map<Integer, List<Position>>> trailByRouteAndBus = new ConcurrentHashMap<>();
+    private final Map<String, Station> stopsByRouteAndId = new ConcurrentHashMap<>();
 
     void update(Position position) {
         Position previous = latestByBus.get(position.busId);
@@ -24,7 +25,10 @@ final class PositionRegistry {
             position.speedKmh = speedKmh <= 120.0 ? speedKmh : 0.0;
         }
         latestByBus.put(position.busId, position);
-        trailByRoute.computeIfAbsent(position.lineId, ignored -> new ArrayList<>()).add(position);
+        trailByRouteAndBus
+                .computeIfAbsent(position.lineId, ignored -> new ConcurrentHashMap<>())
+                .computeIfAbsent(position.busId, ignored -> Collections.synchronizedList(new ArrayList<>()))
+                .add(position);
         registerFixedStop(previous, position);
     }
 
@@ -37,13 +41,17 @@ final class PositionRegistry {
 
     RouteMapData routeDetails(RouteMapData repositoryDetails) {
         int lineId = repositoryDetails.route.lineId;
-        List<Position> trail = trailByRoute.getOrDefault(lineId, new ArrayList<>());
+        Map<Integer, List<Position>> trailsByBus = trailByRouteAndBus.getOrDefault(lineId, new ConcurrentHashMap<>());
+        List<Position> trail = trailsByBus.values().stream()
+                .max(Comparator.comparingInt(List::size))
+                .map(this::snapshot)
+                .orElseGet(ArrayList::new);
         RoutePoint[] points = new RoutePoint[trail.size()];
         for (int i = 0; i < trail.size(); i++) {
             Position position = trail.get(i);
             points[i] = new RoutePoint(lineId, position.latitude, position.longitude, i);
         }
-        Station[] stations = stopsById.values().stream()
+        Station[] stations = stopsByRouteAndId.values().stream()
                 .filter(station -> station.lineId == lineId)
                 .sorted(Comparator.comparingInt(station -> station.id))
                 .toArray(Station[]::new);
@@ -51,11 +59,15 @@ final class PositionRegistry {
     }
 
     private void registerFixedStop(Position previous, Position current) {
-        if (current.stopId <= 0 || stopsById.containsKey(current.stopId)) {
+        if (current.stopId <= 0) {
+            return;
+        }
+        String key = stopKey(current.lineId, current.stopId);
+        if (stopsByRouteAndId.containsKey(key)) {
             return;
         }
         LatLng stopLocation = estimateStopLocation(previous, current);
-        stopsById.put(current.stopId, new Station(
+        stopsByRouteAndId.put(key, new Station(
                 current.stopId,
                 current.lineId,
                 "Parada " + current.stopId,
@@ -63,6 +75,16 @@ final class PositionRegistry {
                 stopLocation.longitude,
                 "stop"
         ));
+    }
+
+    private List<Position> snapshot(List<Position> positions) {
+        synchronized (positions) {
+            return new ArrayList<>(positions);
+        }
+    }
+
+    private String stopKey(int lineId, int stopId) {
+        return lineId + ":" + stopId;
     }
 
     private LatLng estimateStopLocation(Position previous, Position current) {

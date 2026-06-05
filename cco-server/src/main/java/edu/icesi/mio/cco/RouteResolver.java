@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 final class RouteResolver {
     private final OperationalRepositoryPrx operationalRepository;
     private final Set<Integer> knownRoutes = ConcurrentHashMap.newKeySet();
+    private final Set<Integer> warnedUnknownRoutes = ConcurrentHashMap.newKeySet();
 
     RouteResolver(OperationalRepositoryPrx operationalRepository) {
         this.operationalRepository = operationalRepository;
@@ -25,7 +26,12 @@ final class RouteResolver {
             return true;
         }
         refreshRoutes();
-        return knownRoutes.isEmpty() || knownRoutes.contains(datagram.lineId);
+        if (!knownRoutes.isEmpty() && !knownRoutes.contains(datagram.lineId)
+                && warnedUnknownRoutes.add(datagram.lineId)) {
+            System.err.println("Ruta " + datagram.lineId
+                    + " no esta en el catalogo operativo; se acepta por venir en datagrama activo.");
+        }
+        return true;
     }
 
     private void refreshRoutes() {

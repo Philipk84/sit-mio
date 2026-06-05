@@ -6,7 +6,7 @@ export class MapView {
     this.banner = document.querySelector('#mapStatusBanner');
     this.markers = new Map();
     this.stationMarkers = new Map();
-    this.trailPolylines = new Map();
+    this.busTrailPolylines = new Map();
     this.basePolyline = null;
     this.map = null;
     this.centeredLineId = 0;
@@ -71,25 +71,28 @@ export class MapView {
   }
 
   renderTrail(state) {
-    for (const polyline of this.trailPolylines.values()) {
+    for (const polyline of this.busTrailPolylines.values()) {
       polyline.setVisible(false);
     }
     if (state.selectedLineId <= 0) {
       return;
     }
-    const trail = state.routeTrails.get(state.selectedLineId) || [];
-    if (!this.trailPolylines.has(state.selectedLineId)) {
-      this.trailPolylines.set(state.selectedLineId, new google.maps.Polyline({
-        map: this.map,
-        geodesic: true,
-        strokeColor: '#166534',
-        strokeOpacity: 0.88,
-        strokeWeight: 4
-      }));
+    const trailsByBus = state.routeTrailsByBus.get(state.selectedLineId) || new Map();
+    for (const [busId, trail] of trailsByBus.entries()) {
+      const key = `${state.selectedLineId}:${busId}`;
+      if (!this.busTrailPolylines.has(key)) {
+        this.busTrailPolylines.set(key, new google.maps.Polyline({
+          map: this.map,
+          geodesic: true,
+          strokeColor: this.trailColor(busId),
+          strokeOpacity: 0.9,
+          strokeWeight: 4
+        }));
+      }
+      const polyline = this.busTrailPolylines.get(key);
+      polyline.setPath(trail);
+      polyline.setVisible(true);
     }
-    const polyline = this.trailPolylines.get(state.selectedLineId);
-    polyline.setPath(trail);
-    polyline.setVisible(true);
   }
 
   renderRouteDetails(state) {
@@ -110,16 +113,17 @@ export class MapView {
     });
     const visibleStations = new Set();
     for (const station of state.routeDetails.stations) {
-      visibleStations.add(station.id);
+      const stationKey = `${station.lineId}:${station.id}`;
+      visibleStations.add(stationKey);
       const position = { lat: station.latitude, lng: station.longitude };
       const title = `${station.name} - Ruta ${this.routeLabel(state, station.lineId)}`;
-      const marker = this.stationMarkers.get(station.id);
+      const marker = this.stationMarkers.get(stationKey);
       if (marker) {
         marker.setMap(this.map);
         marker.setPosition(position);
         marker.setTitle(title);
       } else {
-        this.stationMarkers.set(station.id, new google.maps.Marker({
+        this.stationMarkers.set(stationKey, new google.maps.Marker({
           position,
           map: this.map,
           title,
@@ -135,8 +139,8 @@ export class MapView {
         }));
       }
     }
-    for (const [stationId, marker] of this.stationMarkers.entries()) {
-      if (!visibleStations.has(stationId)) {
+    for (const [stationKey, marker] of this.stationMarkers.entries()) {
+      if (!visibleStations.has(stationKey)) {
         marker.setMap(null);
       }
     }
@@ -199,6 +203,11 @@ export class MapView {
       scale: 15,
       labelOrigin: new google.maps.Point(0, 0)
     };
+  }
+
+  trailColor(busId) {
+    const colors = ['#166534', '#7c2d12', '#0f766e', '#4338ca', '#be123c', '#0369a1'];
+    return colors[Math.abs(Number(busId)) % colors.length];
   }
 
   animateMarker(marker, target) {
