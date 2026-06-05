@@ -1,0 +1,26 @@
+application {
+    mainClass = 'edu.icesi.mio.common.Noop'
+}
+
+def sliceOutput = layout.buildDirectory.dir('generated/slice')
+
+tasks.register('generateSlice', Exec) {
+    inputs.file("$rootDir/slice/Mio.ice")
+    outputs.dir(sliceOutput)
+    doFirst {
+        sliceOutput.get().asFile.mkdirs()
+    }
+    commandLine 'C:/Program Files/ZeroC/Ice-3.7.10/bin/slice2java.exe',
+            '--output-dir', sliceOutput.get().asFile.absolutePath,
+            "$rootDir/slice/Mio.ice"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir sliceOutput
+        }
+    }
+}
+
+compileJava.dependsOn tasks.named('generateSlice')

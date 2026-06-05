@@ -1,0 +1,27 @@
+plugins {
+    id 'base'
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'application'
+
+    group = 'edu.icesi.mio'
+    version = '1.0.0'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(11)
+        }
+    }
+
+    dependencies {
+        implementation files("$rootDir/lib/ice-3.7.10.jar")
+        implementation files("$rootDir/lib/postgresql-42.3.1.jar")
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = 11
+    }
+}

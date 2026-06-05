@@ -1,0 +1,13 @@
+Variable Tipo Descripción Rango Min Rango Max
+eventType Integer Tipo de Evento 0 10000
+registerdate Date Fecha y hora en la que se registró el datagram en el log del NetPeerManager 31-may-18 31-may-19
+stopId Integer Identificador de la última parada por la que pasó el bus en el IVU -1 26840744
+odometer Integer La distancia en metros recorridos por el bus desde la última parada hasta la ubicación actual -1 121600820
+latitude Integer latitud (y) de la posición del bus en el sistema de coordenadas geográfico del mundo -1288197850 1934980197
+longitude Integer longitud (x) de la posición del bus en el sistema de coordenadas geográfico del mundo -133761367 845963520
+taskId Integer Identificador de la tarea que tiene asignada el bus en el IVU -1 98517645
+lineId Integer Identificador de la línea que tiene asignada el bus en el IVU -1 4272
+tripId Integer Identificador del viaje que tiene asignado el bus en el IVU -1 687964161
+unknown1 Integer ? Número que representa el tipo de evento, manteniendo la tipificación registrada en los mensajes. 0 103
+datagramDate Date Fecha y hora en la que ocurrió el datagram en el bus 31-MAY-18 12.00.00.000000 AM 30-MAY-19 11.59.59.000000 PM
+busId Identificador del bus en el sistema IVU 1 8502

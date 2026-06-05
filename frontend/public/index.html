@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plataforma MIO</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/config.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Plataforma MIO</h1>
+      <p id="status">Conectando con CCO...</p>
+    </div>
+    <div class="toolbar">
+      <label>
+        Ruta
+        <select id="routeSelect"></select>
+      </label>
+      <label>
+        Mes
+        <select id="monthSelect">
+          <option value="1">Enero</option>
+          <option value="2">Febrero</option>
+          <option value="3">Marzo</option>
+          <option value="4">Abril</option>
+          <option value="5" selected>Mayo</option>
+          <option value="6">Junio</option>
+          <option value="7">Julio</option>
+          <option value="8">Agosto</option>
+          <option value="9">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+          <option value="12">Diciembre</option>
+        </select>
+      </label>
+      <button id="refreshMetric">Calcular</button>
+    </div>
+  </header>
+  <main>
+    <section id="map"></section>
+    <aside class="panel">
+      <div>
+        <span class="label">Velocidad promedio</span>
+        <strong id="speedValue">-- km/h</strong>
+      </div>
+      <div>
+        <span class="label">Muestras</span>
+        <strong id="sampleValue">--</strong>
+      </div>
+      <div>
+        <span class="label">Buses visibles</span>
+        <strong id="busValue">0</strong>
+      </div>
+      <p id="metricStatus"></p>
+    </aside>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

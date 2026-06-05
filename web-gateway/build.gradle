@@ -1,0 +1,7 @@
+dependencies {
+    implementation project(':common')
+}
+
+application {
+    mainClass = 'edu.icesi.mio.gateway.WebGatewayApplication'
+}
