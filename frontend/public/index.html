@@ -39,7 +39,10 @@
     </div>
   </header>
   <main>
-    <section id="map"></section>
+    <section class="map-shell">
+      <div id="mapStatusBanner" class="map-banner hidden"></div>
+      <div id="map"></div>
+    </section>
     <aside class="panel">
       <div>
         <span class="label">Velocidad promedio</span>
@@ -56,6 +59,6 @@
       <p id="metricStatus"></p>
     </aside>
   </main>
-  <script src="/app.js"></script>
+  <script type="module" src="/main.js"></script>
 </body>
 </html>

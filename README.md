@@ -23,10 +23,11 @@ Los contratos estan en [slice/Mio.ice](D:/IngeSoft4/mio-system/slice/Mio.ice):
 
 - `DatagramReceiver`: datagramas entrantes desde bus.
 - `PositionService`: posiciones actuales para RF4.
-- `RouteService`: rutas y paradas/rutas disponibles.
+- `RouteService`: rutas disponibles y `routeDetails(lineId)` con ruta, estaciones/paradas y geometria base.
 - `MetricsService`: velocidad promedio por ruta y mes para RF7.
 - `HistoricalRepository` y `OperationalRepository`: acceso al Centro de Datos.
 - `HistoricalRepository.storeDatagram`: persistencia de datagramas recibidos durante la operacion.
+- Los stubs ICE generados desde `slice/Mio.ice` estan versionados en `common/src/main/java/Mio`, por lo que el build no depende de `slice2java` local. Para regenerarlos opcionalmente, ejecutar `gradle :common:generateSlice` con `ICE_HOME` configurado.
 
 ## Patrones usados
 
@@ -34,10 +35,12 @@ Los contratos estan en [slice/Mio.ice](D:/IngeSoft4/mio-system/slice/Mio.ice):
 - Reliable Messaging: `DatagramReceiver.submit(...)` retorna ACK booleano y el simulador reintenta si no recibe confirmacion. Mejora Availability ante fallas parciales.
 - Thread Pool: `DatagramQueueProcessor` procesa datagramas con un pool configurable por `MIO_CCO_WORKERS`. Mejora Performance y evita crear hilos sin control.
 - Master-Worker: `MetricsMaster` coordina el calculo de RF7 en workers. Mejora Performance para velocidad promedio por ruta y mes.
-- MVC: el frontend separa vista HTML/CSS, modelo de estado en `app.js` y controladores de eventos/API.
-- Observer: el refresco periodico de posiciones actualiza el modelo y notifica visualmente el estado del mapa/metricas.
+- MVC: el frontend separa `MapModel/MapView/MapController` y `AnalyticsModel/AnalyticsView/AnalyticsController`.
+- Observer: `ObservableModel` permite que las vistas se subscriban a cambios de modelos.
 - Proxy: `web-gateway` y `cco-server` consumen servicios remotos mediante proxies Ice, desacoplando UI, CCO y DataCenter.
 - Repository: `PersistentHistoricalRepository` y `CsvOperationalRepository` encapsulan almacenamiento historico y operativo.
+
+Ver [ARCHITECTURE_MAPPING.md](D:/IngeSoft4/mio-system/ARCHITECTURE_MAPPING.md) para la tabla completa deployment -> codigo -> patron -> RF/QAW.
 
 ## Ejecutar
 
@@ -77,7 +80,7 @@ gradle --offline :bus-simulator:run
 
 Por defecto el simulador representa un solo bus de una sola ruta, queda en ciclo continuo (`MIO_BUS_LOOP=true`) y reenvia los puntos GPS de esa ruta con timestamp incremental para que el marcador se mueva y se puedan calcular velocidades.
 
-El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva su propio rastro de posiciones GPS recibidas; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema no corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
+El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva su propio rastro de posiciones GPS recibidas; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema tambien renderiza detalle de ruta (`routeDetails`), estaciones/paradas sintetizadas desde puntos GPS reales y un trazado base. No corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
 
 Para correr varios buses/rutas, abre una terminal por nodo simulado:
 

@@ -37,6 +37,35 @@ module Mio
 
     sequence<Route> RouteSeq;
 
+    struct Station
+    {
+        int id;
+        int lineId;
+        string name;
+        double latitude;
+        double longitude;
+        string kind;
+    }
+
+    sequence<Station> StationSeq;
+
+    struct RoutePoint
+    {
+        int lineId;
+        double latitude;
+        double longitude;
+        int order;
+    }
+
+    sequence<RoutePoint> RoutePointSeq;
+
+    struct RouteMapData
+    {
+        Route route;
+        StationSeq stations;
+        RoutePointSeq baseGeometry;
+    }
+
     struct AverageSpeed
     {
         int lineId;
@@ -58,6 +87,7 @@ module Mio
     interface RouteService
     {
         RouteSeq listRoutes();
+        RouteMapData routeDetails(int lineId);
     }
 
     interface MetricsService
@@ -74,5 +104,6 @@ module Mio
     interface OperationalRepository
     {
         RouteSeq routes();
+        RouteMapData routeDetails(int lineId);
     }
 }

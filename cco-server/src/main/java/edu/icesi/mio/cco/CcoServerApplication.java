@@ -28,11 +28,15 @@ public final class CcoServerApplication {
 
             PositionRegistry positionRegistry = new PositionRegistry();
             MetricsMaster metricsMaster = new MetricsMaster(historicalRepository);
+            DatagramQueue datagramQueue = new DatagramQueue(Env.intValue("MIO_DATAGRAM_QUEUE_CAPACITY", 100_000));
+            ThreadPoolDispatcher dispatcher = new ThreadPoolDispatcher(Env.intValue("MIO_CCO_WORKERS", 4));
+            ReliableMessagingAgent reliableMessagingAgent = new ReliableMessagingAgent();
+            RouteResolver routeResolver = new RouteResolver(operationalRepository);
+            ReceptorDatagramas receptorDatagramas = new ReceptorDatagramas(
+                    reliableMessagingAgent, routeResolver, datagramQueue);
             DatagramQueueProcessor processor = new DatagramQueueProcessor(
-                    positionRegistry,
-                    historicalRepository,
-                    Env.intValue("MIO_CCO_WORKERS", 4));
-            CcoFacade facade = new CcoFacade(positionRegistry, operationalRepository, metricsMaster, processor);
+                    datagramQueue, dispatcher, positionRegistry, historicalRepository);
+            CcoFacade facade = new CcoFacade(positionRegistry, operationalRepository, metricsMaster, receptorDatagramas);
             processor.start();
 
             ObjectAdapter adapter = IceSupport.adapter(communicator, "CcoAdapter", endpoints);

@@ -5,6 +5,7 @@ import Mio.Datagram;
 import Mio.OperationalRepositoryPrx;
 import Mio.Position;
 import Mio.Route;
+import Mio.RouteMapData;
 
 import com.zeroc.Ice.Current;
 
@@ -12,20 +13,18 @@ final class CcoFacade {
     private final PositionRegistry positionRegistry;
     private final OperationalRepositoryPrx operationalRepository;
     private final MetricsMaster metricsMaster;
-    private final DatagramQueueProcessor datagramQueueProcessor;
+    private final ReceptorDatagramas receptorDatagramas;
 
     CcoFacade(PositionRegistry positionRegistry, OperationalRepositoryPrx operationalRepository,
-              MetricsMaster metricsMaster, DatagramQueueProcessor datagramQueueProcessor) {
+              MetricsMaster metricsMaster, ReceptorDatagramas receptorDatagramas) {
         this.positionRegistry = positionRegistry;
         this.operationalRepository = operationalRepository;
         this.metricsMaster = metricsMaster;
-        this.datagramQueueProcessor = datagramQueueProcessor;
+        this.receptorDatagramas = receptorDatagramas;
     }
 
     public boolean submit(Datagram datagram, Current current) {
-        boolean accepted = datagramQueueProcessor.offer(datagram);
-        ReliableMessagingAgent.ack(datagram, accepted);
-        return accepted;
+        return receptorDatagramas.receive(datagram);
     }
 
     public Position[] latestPositions(int lineId, Current current) {
@@ -34,6 +33,11 @@ final class CcoFacade {
 
     public Route[] listRoutes(Current current) {
         return operationalRepository.routes();
+    }
+
+    public RouteMapData routeDetails(int lineId, Current current) {
+        RouteMapData repositoryDetails = operationalRepository.routeDetails(lineId);
+        return positionRegistry.routeDetails(repositoryDetails);
     }
 
     public AverageSpeed averageSpeedByRouteAndMonth(int lineId, int month, Current current) {

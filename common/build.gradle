@@ -2,25 +2,18 @@ application {
     mainClass = 'edu.icesi.mio.common.Noop'
 }
 
-def sliceOutput = layout.buildDirectory.dir('generated/slice')
+def generatedSliceSource = file("$projectDir/src/main/java")
 
 tasks.register('generateSlice', Exec) {
     inputs.file("$rootDir/slice/Mio.ice")
-    outputs.dir(sliceOutput)
+    outputs.dir("$projectDir/src/main/java/Mio")
     doFirst {
-        sliceOutput.get().asFile.mkdirs()
+        file("$projectDir/src/main/java/Mio").mkdirs()
     }
-    commandLine 'C:/Program Files/ZeroC/Ice-3.7.10/bin/slice2java.exe',
-            '--output-dir', sliceOutput.get().asFile.absolutePath,
+    def executableName = org.gradle.internal.os.OperatingSystem.current().isWindows() ? 'slice2java.exe' : 'slice2java'
+    def iceHome = providers.environmentVariable('ICE_HOME').orNull
+    def sliceExecutable = iceHome ? file("$iceHome/bin/$executableName").absolutePath : executableName
+    commandLine sliceExecutable,
+            '--output-dir', generatedSliceSource.absolutePath,
             "$rootDir/slice/Mio.ice"
 }
-
-sourceSets {
-    main {
-        java {
-            srcDir sliceOutput
-        }
-    }
-}
-
-compileJava.dependsOn tasks.named('generateSlice')

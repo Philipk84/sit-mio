@@ -3,11 +3,11 @@ package edu.icesi.mio.cco;
 import Mio.AverageSpeed;
 import Mio.HistoricalRepositoryPrx;
 import Mio.Position;
-import edu.icesi.mio.common.Geo;
 
 import java.util.Arrays;
-import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +24,7 @@ final class MetricsMaster {
 
     AverageSpeed averageSpeedByRouteAndMonth(int lineId, int month) {
         try {
-            return workers.submit(() -> calculate(lineId, month)).get(3, TimeUnit.SECONDS);
+            return calculate(lineId, month);
         } catch (Exception ex) {
             System.err.println("Consulta de metricas no disponible: " + ex.getMessage());
             return new AverageSpeed(lineId, month, 0.0, 0);
@@ -35,20 +35,22 @@ final class MetricsMaster {
         workers.shutdownNow();
     }
 
-    private AverageSpeed calculate(int lineId, int month) {
-        Map<Integer, java.util.List<Position>> byBus = Arrays.stream(
+    private AverageSpeed calculate(int lineId, int month) throws Exception {
+        Map<Integer, List<Position>> byBus = Arrays.stream(
                         historicalRepository.positionsByRouteAndMonth(lineId, month))
                 .collect(Collectors.groupingBy(position -> position.busId));
+        List<Callable<MetricPartialResult>> tasks = byBus.entrySet().stream()
+                .map(entry -> (Callable<MetricPartialResult>) () ->
+                        new MetricsWorker().calculate(new MetricTask(entry.getKey(), entry.getValue())))
+                .collect(Collectors.toList());
+
         double total = 0.0;
         long samples = 0;
-        for (java.util.List<Position> positions : byBus.values()) {
-            positions.sort(Comparator.comparing(position -> position.timestamp));
-            for (int i = 1; i < positions.size(); i++) {
-                double speed = Geo.speedKmh(positions.get(i - 1), positions.get(i));
-                if (speed > 0.0 && speed <= 120.0) {
-                    total += speed;
-                    samples++;
-                }
+        for (java.util.concurrent.Future<MetricPartialResult> future : workers.invokeAll(tasks, 2500, TimeUnit.MILLISECONDS)) {
+            if (!future.isCancelled()) {
+                MetricPartialResult partial = future.get();
+                total += partial.totalSpeed();
+                samples += partial.samples();
             }
         }
         return new AverageSpeed(lineId, month, samples == 0 ? 0.0 : total / samples, samples);
