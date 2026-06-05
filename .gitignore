@@ -1,0 +1,41 @@
+# Gradle
+.gradle/
+**/build/
+
+# Java / IDE generated output
+**/bin/
+*.class
+*.jar
+*.war
+*.ear
+
+# Keep local dependency jars intentionally committed.
+!lib/*.jar
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime logs and temporary output
+logs/
+*.log
+tmp/
+temp/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Extracted/generated analysis artifacts
+extracted_pdf_text/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
