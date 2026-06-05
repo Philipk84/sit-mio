@@ -33,6 +33,9 @@ temp/
 # Extracted/generated analysis artifacts
 extracted_pdf_text/
 
+# Large local datasets
+datagrams-MiniPilot.csv
+
 # OS / editor noise
 .DS_Store
 Thumbs.db
