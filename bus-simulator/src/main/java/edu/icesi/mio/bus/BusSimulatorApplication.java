@@ -10,6 +10,7 @@ import edu.icesi.mio.common.Paths;
 import com.zeroc.Ice.Communicator;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,7 +24,7 @@ public final class BusSimulatorApplication {
     }
 
     public static void main(String[] args) throws Exception {
-        String datagramsFile = Env.value("MIO_BUS_DATAGRAMS_FILE", "datagrams-MiniPilot.csv");
+        Path datagramsFile = resolveDatagramsFile(Env.value("MIO_BUS_DATAGRAMS_FILE", "datagrams-MiniPilot.csv"));
         String ccoProxy = Env.value("MIO_DATAGRAM_RECEIVER_PROXY",
                 "DatagramReceiver:tcp -h 127.0.0.1 -p 10010");
         int delayMs = Env.intValue("MIO_BUS_DELAY_MS", 250);
@@ -42,7 +43,7 @@ public final class BusSimulatorApplication {
                     + ", busSimulado=" + simulatedBusId
                     + ", busFuente=" + sourceBusId);
             do {
-                try (Stream<String> lines = Files.lines(Paths.projectFile(datagramsFile))) {
+                try (Stream<String> lines = Files.lines(datagramsFile)) {
                     lines.map(CsvDatagramParser::parse)
                             .filter(optional -> optional.isPresent())
                             .map(optional -> optional.get())
@@ -60,6 +61,20 @@ public final class BusSimulatorApplication {
 
     private static boolean hasValidGps(Datagram datagram) {
         return datagram.latitude > 0 && datagram.longitude < 0;
+    }
+
+    private static Path resolveDatagramsFile(String configuredFile) {
+        Path configured = Paths.projectFile(configuredFile);
+        if (Files.exists(configured)) {
+            return configured;
+        }
+        Path fallback = Paths.projectFile("chunck.csv");
+        if (Files.exists(fallback)) {
+            System.err.println("No se encontro " + configuredFile + "; usando fallback " + fallback);
+            return fallback;
+        }
+        throw new IllegalStateException("No se encontro archivo de datagramas: " + configuredFile
+                + ". Define MIO_BUS_DATAGRAMS_FILE con una ruta valida.");
     }
 
     private static Datagram simulatedDatagram(Datagram source, int simulatedLineId, int simulatedBusId,

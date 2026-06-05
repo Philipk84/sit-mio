@@ -127,6 +127,7 @@ Luego abrir `http://127.0.0.1:3000`.
 
 - `MIO_DATAGRAMS_FILE`: CSV historico para DataCenter. Default: `chunck.csv`.
 - `MIO_BUS_DATAGRAMS_FILE`: CSV usado por el simulador. Default: `datagrams-MiniPilot.csv`.
+  El resolvedor busca tambien carpetas hermanas como `D:\IngeSoft4\datagrams-MiniPilot\datagrams-MiniPilot.csv`. Si no lo encuentra, usa `chunck.csv` como fallback para demo.
 - `MIO_ROUTES_FILE`: CSV de rutas. Default: `lines-241-ActiveGT.csv`.
 - `MIO_GATEWAY_PORT`: puerto HTTP del gateway. Default: `8080`.
 - `FRONTEND_PORT`: puerto del frontend Node. Default: `3000`.
