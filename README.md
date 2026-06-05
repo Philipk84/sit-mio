@@ -80,7 +80,7 @@ gradle --offline :bus-simulator:run
 
 Por defecto el simulador representa un solo bus de una sola ruta, queda en ciclo continuo (`MIO_BUS_LOOP=true`) y reenvia los puntos GPS de esa ruta con timestamp incremental para que el marcador se mueva y se puedan calcular velocidades.
 
-El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva rastros separados por bus para no intercalar posiciones cuando dos buses estan en la misma linea; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema tambien renderiza detalle de ruta (`routeDetails`), paradas fijas por `stopId` y un trazado base. La posicion de cada parada se estima usando el `odometer` del datagrama, que segun el diccionario de datos representa los metros recorridos desde la ultima parada hasta la ubicacion actual del bus. No corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido. Para evitar lineas rectas cuando un datagrama salta entre dos posiciones lejanas, la UI intenta resolver ese tramo con Google Maps `DirectionsService` en modo carro y dibuja la geometria devuelta por calles. Si la API no responde, no hay cuota o el tramo no se puede enrutar, conserva el segmento GPS directo como fallback.
+El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva rastros separados por bus para no intercalar posiciones cuando dos buses estan en la misma linea; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema tambien renderiza detalle de ruta (`routeDetails`), paradas fijas por `stopId` y un trazado base. La posicion de cada parada se estima usando el `odometer` del datagrama, que segun el diccionario de datos representa los metros recorridos desde la ultima parada hasta la ubicacion actual del bus. No corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
 
 Para correr varios buses/rutas, abre una terminal por nodo simulado:
 
@@ -178,3 +178,7 @@ $env:MIO_DB_USER='postgres'
 $env:MIO_DB_PASSWORD='postgres'
 gradle --offline :datacenter:run
 ```
+
+## Despliegue en maquinas separadas
+
+La guia de despliegue por JAR, classpath de Ice, IPs LAN, puertos y variables por nodo esta en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

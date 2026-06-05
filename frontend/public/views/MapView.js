@@ -7,9 +7,7 @@ export class MapView {
     this.markers = new Map();
     this.stationMarkers = new Map();
     this.busTrailPolylines = new Map();
-    this.roadTrails = new Map();
     this.basePolyline = null;
-    this.directionsService = null;
     this.map = null;
     this.centeredLineId = 0;
   }
@@ -26,7 +24,6 @@ export class MapView {
         zoom: 12,
         mapId: 'mio-map'
       });
-      this.directionsService = new google.maps.DirectionsService();
       onReady();
     };
     const script = document.createElement('script');
@@ -93,78 +90,9 @@ export class MapView {
         }));
       }
       const polyline = this.busTrailPolylines.get(key);
-      this.updateRoadTrail(key, trail, polyline);
+      polyline.setPath(trail);
       polyline.setVisible(true);
     }
-  }
-
-  updateRoadTrail(key, trail, polyline) {
-    if (!trail.length) {
-      polyline.setPath([]);
-      return;
-    }
-    const roadTrail = this.roadTrailState(key, trail);
-    polyline.setPath(roadTrail.path.length > 1 ? roadTrail.path : trail);
-    this.resolveNextRoadSegment(key, trail, polyline);
-  }
-
-  roadTrailState(key, trail) {
-    const firstPointKey = this.pointKey(trail[0]);
-    const current = this.roadTrails.get(key);
-    if (current && current.firstPointKey === firstPointKey) {
-      return current;
-    }
-    const next = {
-      firstPointKey,
-      path: [trail[0]],
-      resolvedUntil: 0,
-      pending: false
-    };
-    this.roadTrails.set(key, next);
-    return next;
-  }
-
-  resolveNextRoadSegment(key, trail, polyline) {
-    const roadTrail = this.roadTrailState(key, trail);
-    if (roadTrail.pending || roadTrail.resolvedUntil >= trail.length - 1) {
-      return;
-    }
-    const from = trail[roadTrail.resolvedUntil];
-    const to = trail[roadTrail.resolvedUntil + 1];
-    if (!this.directionsService || this.distanceMeters(from, to) < 120) {
-      this.appendRoadSegment(roadTrail, [to], polyline);
-      this.resolveNextRoadSegment(key, trail, polyline);
-      return;
-    }
-    roadTrail.pending = true;
-    this.directionsService.route({
-      origin: from,
-      destination: to,
-      travelMode: google.maps.TravelMode.DRIVING,
-      provideRouteAlternatives: false
-    }, (response, status) => {
-      roadTrail.pending = false;
-      const path = status === google.maps.DirectionsStatus.OK
-        && response.routes
-        && response.routes[0]
-        ? response.routes[0].overview_path.map(point => ({ lat: point.lat(), lng: point.lng() }))
-        : [to];
-      this.appendRoadSegment(roadTrail, path, polyline);
-    });
-  }
-
-  appendRoadSegment(roadTrail, path, polyline) {
-    for (const point of path) {
-      const last = roadTrail.path[roadTrail.path.length - 1];
-      if (!last || last.lat !== point.lat || last.lng !== point.lng) {
-        roadTrail.path.push(point);
-      }
-    }
-    roadTrail.resolvedUntil += 1;
-    if (roadTrail.path.length > 1600) {
-      roadTrail.path.splice(0, roadTrail.path.length - 1600);
-    }
-    polyline.setPath(roadTrail.path);
   }
 
   renderRouteDetails(state) {
@@ -280,25 +208,6 @@ export class MapView {
   trailColor(busId) {
     const colors = ['#166534', '#7c2d12', '#0f766e', '#4338ca', '#be123c', '#0369a1'];
     return colors[Math.abs(Number(busId)) % colors.length];
-  }
-
-  pointKey(point) {
-    return `${point.lat.toFixed(7)},${point.lng.toFixed(7)}`;
-  }
-
-  distanceMeters(from, to) {
-    const radius = 6371000;
-    const dLat = this.toRadians(to.lat - from.lat);
-    const dLng = this.toRadians(to.lng - from.lng);
-    const lat1 = this.toRadians(from.lat);
-    const lat2 = this.toRadians(to.lat);
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-      + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  toRadians(value) {
-    return value * Math.PI / 180;
   }
 
   animateMarker(marker, target) {
