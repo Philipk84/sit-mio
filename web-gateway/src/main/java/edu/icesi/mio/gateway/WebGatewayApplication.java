@@ -152,6 +152,8 @@ public final class WebGatewayApplication {
             Position position = positions[i];
             json.append("{\"busId\":").append(position.busId)
                     .append(",\"lineId\":").append(position.lineId)
+                    .append(",\"stopId\":").append(position.stopId)
+                    .append(",\"odometer\":").append(position.odometer)
                     .append(",\"latitude\":").append(position.latitude)
                     .append(",\"longitude\":").append(position.longitude)
                     .append(",\"speedKmh\":").append(position.speedKmh)

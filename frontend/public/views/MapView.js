@@ -5,7 +5,7 @@ export class MapView {
     this.busValue = document.querySelector('#busValue');
     this.banner = document.querySelector('#mapStatusBanner');
     this.markers = new Map();
-    this.stationMarkers = [];
+    this.stationMarkers = new Map();
     this.trailPolylines = new Map();
     this.basePolyline = null;
     this.map = null;
@@ -93,10 +93,6 @@ export class MapView {
   }
 
   renderRouteDetails(state) {
-    for (const marker of this.stationMarkers) {
-      marker.setMap(null);
-    }
-    this.stationMarkers = [];
     if (this.basePolyline) {
       this.basePolyline.setMap(null);
       this.basePolyline = null;
@@ -112,20 +108,38 @@ export class MapView {
       strokeOpacity: 0.45,
       strokeWeight: 6
     });
-    this.stationMarkers = state.routeDetails.stations.map(station => new google.maps.Marker({
-      position: { lat: station.latitude, lng: station.longitude },
-      map: this.map,
-      title: station.name,
-      label: { text: station.kind === 'station' ? 'E' : 'P', color: '#ffffff', fontWeight: '700' },
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        fillColor: station.kind === 'station' ? '#1d4ed8' : '#0f766e',
-        fillOpacity: 1,
-        strokeColor: '#ffffff',
-        strokeWeight: 2,
-        scale: 10
+    const visibleStations = new Set();
+    for (const station of state.routeDetails.stations) {
+      visibleStations.add(station.id);
+      const position = { lat: station.latitude, lng: station.longitude };
+      const title = `${station.name} - Ruta ${this.routeLabel(state, station.lineId)}`;
+      const marker = this.stationMarkers.get(station.id);
+      if (marker) {
+        marker.setMap(this.map);
+        marker.setPosition(position);
+        marker.setTitle(title);
+      } else {
+        this.stationMarkers.set(station.id, new google.maps.Marker({
+          position,
+          map: this.map,
+          title,
+          label: { text: station.kind === 'station' ? 'E' : 'P', color: '#ffffff', fontWeight: '700' },
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: station.kind === 'station' ? '#1d4ed8' : '#0f766e',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+            scale: 10
+          }
+        }));
       }
-    }));
+    }
+    for (const [stationId, marker] of this.stationMarkers.entries()) {
+      if (!visibleStations.has(stationId)) {
+        marker.setMap(null);
+      }
+    }
   }
 
   renderBuses(state) {
@@ -138,11 +152,12 @@ export class MapView {
       if (marker) {
         this.animateMarker(marker, latLng);
         marker.setLabel(this.markerLabel(routeName));
+        marker.setTitle(`Bus ${position.busId} - Ruta ${routeName} - ${position.odometer} m desde parada ${position.stopId}`);
       } else {
         this.markers.set(position.busId, new google.maps.Marker({
           position: latLng,
           map: this.map,
-          title: `Bus ${position.busId} - Ruta ${routeName}`,
+          title: `Bus ${position.busId} - Ruta ${routeName} - ${position.odometer} m desde parada ${position.stopId}`,
           label: this.markerLabel(routeName),
           icon: this.markerIcon()
         }));

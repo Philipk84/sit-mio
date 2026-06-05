@@ -46,6 +46,8 @@ public final class CsvDatagramParser {
         return new Position(
                 datagram.busId,
                 datagram.lineId,
+                datagram.stopId,
+                datagram.odometer,
                 datagram.latitude / 10_000_000.0,
                 datagram.longitude / 10_000_000.0,
                 0.0,

@@ -20,6 +20,8 @@ module Mio
     {
         int busId;
         int lineId;
+        int stopId;
+        long odometer;
         double latitude;
         double longitude;
         double speedKmh;

@@ -11,6 +11,7 @@
 | ResolverRutaBus | `cco-server/src/main/java/edu/icesi/mio/cco/RouteResolver.java` | Resolver / coordinador de flujo | RF4, RF8 refinado, trazabilidad bus-ruta |
 | Gestor Rutas | `datacenter/src/main/java/edu/icesi/mio/datacenter/CsvOperationalRepository.java`, `RouteServiceServant.java` | Repository, Proxy ICE | RF4, ServicioRutasParadas |
 | Servicio Rutas/Paradas | `slice/Mio.ice` (`RouteMapData`, `Station`, `RoutePoint`), `/api/route-details` | Contrato distribuido ICE | RF4 completo |
+| Estimacion de paradas fijas | `PositionRegistry.registerFixedStop(...)` usando `stopId` y `odometer` | Gestor Posiciones / Route details | RF4, paradas y estaciones |
 | Repositorio historico | `datacenter/src/main/java/edu/icesi/mio/datacenter/PersistentHistoricalRepository.java` | Repository | RF7, datos historicos |
 | MetricsMaster | `cco-server/src/main/java/edu/icesi/mio/cco/MetricsMaster.java` | Master-Worker | RF7, Performance |
 | MetricsWorker | `cco-server/src/main/java/edu/icesi/mio/cco/MetricsWorker.java` | Master-Worker | RF7, calculo parcial por bus |

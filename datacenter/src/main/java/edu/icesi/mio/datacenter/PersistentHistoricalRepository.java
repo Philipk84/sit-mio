@@ -139,6 +139,8 @@ final class PersistentHistoricalRepository implements HistoricalRepository {
                     positions.add(new Position(
                             resultSet.getInt("bus_id"),
                             resultSet.getInt("line_id"),
+                            -1,
+                            0,
                             resultSet.getInt("latitude") / 10_000_000.0,
                             resultSet.getInt("longitude") / 10_000_000.0,
                             0.0,

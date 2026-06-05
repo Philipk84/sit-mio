@@ -39,7 +39,7 @@ public final class PositionSeqHelper
     public static Position[] read(com.zeroc.Ice.InputStream istr)
     {
         final Position[] v;
-        final int len0 = istr.readAndCheckSeqSize(33);
+        final int len0 = istr.readAndCheckSeqSize(45);
         v = new Position[len0];
         for(int i0 = 0; i0 < len0; i0++)
         {

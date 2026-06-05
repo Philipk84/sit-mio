@@ -22,6 +22,10 @@ public class Position implements java.lang.Cloneable,
 
     public int lineId;
 
+    public int stopId;
+
+    public long odometer;
+
     public double latitude;
 
     public double longitude;
@@ -35,10 +39,12 @@ public class Position implements java.lang.Cloneable,
         this.timestamp = "";
     }
 
-    public Position(int busId, int lineId, double latitude, double longitude, double speedKmh, String timestamp)
+    public Position(int busId, int lineId, int stopId, long odometer, double latitude, double longitude, double speedKmh, String timestamp)
     {
         this.busId = busId;
         this.lineId = lineId;
+        this.stopId = stopId;
+        this.odometer = odometer;
         this.latitude = latitude;
         this.longitude = longitude;
         this.speedKmh = speedKmh;
@@ -64,6 +70,14 @@ public class Position implements java.lang.Cloneable,
                 return false;
             }
             if(this.lineId != r.lineId)
+            {
+                return false;
+            }
+            if(this.stopId != r.stopId)
+            {
+                return false;
+            }
+            if(this.odometer != r.odometer)
             {
                 return false;
             }
@@ -99,6 +113,8 @@ public class Position implements java.lang.Cloneable,
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, "::Mio::Position");
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, busId);
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, lineId);
+        h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, stopId);
+        h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, odometer);
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, latitude);
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, longitude);
         h_ = com.zeroc.IceInternal.HashUtil.hashAdd(h_, speedKmh);
@@ -124,6 +140,8 @@ public class Position implements java.lang.Cloneable,
     {
         ostr.writeInt(this.busId);
         ostr.writeInt(this.lineId);
+        ostr.writeInt(this.stopId);
+        ostr.writeLong(this.odometer);
         ostr.writeDouble(this.latitude);
         ostr.writeDouble(this.longitude);
         ostr.writeDouble(this.speedKmh);
@@ -134,6 +152,8 @@ public class Position implements java.lang.Cloneable,
     {
         this.busId = istr.readInt();
         this.lineId = istr.readInt();
+        this.stopId = istr.readInt();
+        this.odometer = istr.readLong();
         this.latitude = istr.readDouble();
         this.longitude = istr.readDouble();
         this.speedKmh = istr.readDouble();
@@ -193,5 +213,5 @@ public class Position implements java.lang.Cloneable,
     private static final Position _nullMarshalValue = new Position();
 
     /** @hidden */
-    public static final long serialVersionUID = -327803769L;
+    public static final long serialVersionUID = -250940515L;
 }

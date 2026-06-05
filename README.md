@@ -80,7 +80,7 @@ gradle --offline :bus-simulator:run
 
 Por defecto el simulador representa un solo bus de una sola ruta, queda en ciclo continuo (`MIO_BUS_LOOP=true`) y reenvia los puntos GPS de esa ruta con timestamp incremental para que el marcador se mueva y se puedan calcular velocidades.
 
-El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva su propio rastro de posiciones GPS recibidas; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema tambien renderiza detalle de ruta (`routeDetails`), estaciones/paradas sintetizadas desde puntos GPS reales y un trazado base. No corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
+El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva su propio rastro de posiciones GPS recibidas; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema tambien renderiza detalle de ruta (`routeDetails`), paradas fijas por `stopId` y un trazado base. La posicion de cada parada se estima usando el `odometer` del datagrama, que segun el diccionario de datos representa los metros recorridos desde la ultima parada hasta la ubicacion actual del bus. No corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
 
 Para correr varios buses/rutas, abre una terminal por nodo simulado:
 
