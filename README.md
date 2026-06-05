@@ -13,7 +13,7 @@ Solucion base para los requerimientos RF4 y RF7 del parcial SITM-MIO.
 
 - `bus-simulator`: representa un nodo BUS SIT-MIO. Lee datagramas CSV de una ruta, fuerza un `busId` configurable y los envia recurrentemente por Ice al CCO para evidenciar movimiento.
 - `cco-server`: representa el Servidor CCO. Recibe datagramas, actualiza posiciones, expone rutas y calcula metricas.
-- `datacenter`: representa el Centro de Datos. Expone repositorio operativo e historico por Ice y persiste datagramas en Postgres cuando se configura `MIO_DB_URL`.
+- `datacenter`: representa el Centro de Datos. Expone repositorio operativo e historico por Ice y persiste datagramas en Postgres. Por defecto usa `jdbc:postgresql://localhost:5432/mio`.
 - `web-gateway`: puente HTTP/JSON para el navegador. Internamente consume servicios Ice del CCO.
 - `frontend`: servidor Node.js estatico para la UI. Al abrir, no pinta todas las rutas; primero detecta rutas activas y el usuario elige cual ver.
 
@@ -77,7 +77,7 @@ gradle --offline :bus-simulator:run
 
 Por defecto el simulador representa un solo bus de una sola ruta, queda en ciclo continuo (`MIO_BUS_LOOP=true`) y reenvia los puntos GPS de esa ruta con timestamp incremental para que el marcador se mueva y se puedan calcular velocidades.
 
-El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. La linea verde del mapa es el rastro de posiciones GPS recibidas para la ruta seleccionada; no corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
+El mapa muestra solo la ruta seleccionada por el usuario. El selector se llena con rutas activas, detectadas a partir de los buses que estan enviando datagramas al CCO. Cada ruta conserva su propio rastro de posiciones GPS recibidas; cuando se selecciona otra ruta, el rastro anterior se oculta y se muestra el de la nueva seleccion. El sistema no corrige ni acomoda distancias, solo interpola visualmente el marcador entre una coordenada real y la siguiente para que el movimiento se vea fluido.
 
 Para correr varios buses/rutas, abre una terminal por nodo simulado:
 
@@ -131,7 +131,7 @@ Luego abrir `http://127.0.0.1:3000`.
 - `MIO_GATEWAY_PORT`: puerto HTTP del gateway. Default: `8080`.
 - `FRONTEND_PORT`: puerto del frontend Node. Default: `3000`.
 - `GOOGLE_MAPS_API_KEY`: llave de Google Maps para renderizar el mapa.
-- `MIO_DB_URL`: JDBC URL de Postgres. Si no se define, el DataCenter usa memoria y CSV local como fallback.
+- `MIO_DB_URL`: JDBC URL de Postgres. Default: `jdbc:postgresql://localhost:5432/mio`.
 - `MIO_DB_USER`: usuario de Postgres. Default: `postgres`.
 - `MIO_DB_PASSWORD`: password de Postgres. Default: `postgres`.
 - `MIO_CCO_WORKERS`: numero de workers para procesar datagramas. Default: `4`.

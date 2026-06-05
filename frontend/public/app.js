@@ -4,8 +4,8 @@ const state = {
   routes: [],
   routesByLineId: new Map(),
   activeLineIds: new Set(),
-  routeTrail: [],
-  routePolyline: null,
+  routeTrails: new Map(),
+  routePolylines: new Map(),
   selectedLineId: 0,
   hasCenteredSelection: false,
   monitoring: false
@@ -39,14 +39,7 @@ function initMap() {
     zoom: 12,
     mapId: 'mio-map'
   });
-  state.routePolyline = new google.maps.Polyline({
-    map: state.map,
-    path: [],
-    geodesic: true,
-    strokeColor: '#166534',
-    strokeOpacity: 0.88,
-    strokeWeight: 4
-  });
+  hideAllRoutePolylines();
 }
 
 function startMonitoring() {
@@ -70,12 +63,13 @@ async function monitorActiveRoutes() {
   try {
     const positions = await getJson('/api/positions?lineId=0');
     state.activeLineIds = new Set(positions.map(position => Number(position.lineId)));
+    positions.forEach(position => appendRoutePoint(position));
     renderRouteOptions();
 
     if (state.selectedLineId > 0) {
       await refreshSelectedRoute();
     } else {
-      clearMap();
+      clearVisibleMap();
       busValue.textContent = '0';
       statusEl.textContent = state.activeLineIds.size
         ? `${state.activeLineIds.size} rutas activas. Selecciona una para verla.`
@@ -133,7 +127,7 @@ function paintPosition(position) {
   const routeName = routeLabel(position.lineId);
   const marker = state.markers.get(position.busId);
 
-  appendRoutePoint(latLng);
+  appendRoutePoint(position);
   if (!state.hasCenteredSelection) {
     state.map.panTo(latLng);
     state.hasCenteredSelection = true;
@@ -154,18 +148,45 @@ function paintPosition(position) {
   }
 }
 
-function appendRoutePoint(latLng) {
-  const last = state.routeTrail[state.routeTrail.length - 1];
+function appendRoutePoint(position) {
+  const lineId = Number(position.lineId);
+  const latLng = { lat: position.latitude, lng: position.longitude };
+  const trail = state.routeTrails.get(lineId) || [];
+  const last = trail[trail.length - 1];
   if (last && last.lat === latLng.lat && last.lng === latLng.lng) {
     return;
   }
-  state.routeTrail.push(latLng);
-  if (state.routeTrail.length > 600) {
-    state.routeTrail.shift();
+  trail.push(latLng);
+  if (trail.length > 900) {
+    trail.shift();
   }
-  if (state.routePolyline) {
-    state.routePolyline.setPath(state.routeTrail);
+  state.routeTrails.set(lineId, trail);
+
+  if (state.map) {
+    const polyline = routePolyline(lineId);
+    polyline.setPath(trail);
+    polyline.setVisible(lineId === state.selectedLineId);
   }
+}
+
+function routePolyline(lineId) {
+  if (!state.routePolylines.has(lineId)) {
+    state.routePolylines.set(lineId, new google.maps.Polyline({
+      map: state.map,
+      path: state.routeTrails.get(lineId) || [],
+      geodesic: true,
+      visible: lineId === state.selectedLineId,
+      strokeColor: routeColor(lineId),
+      strokeOpacity: 0.88,
+      strokeWeight: 4
+    }));
+  }
+  return state.routePolylines.get(lineId);
+}
+
+function routeColor(lineId) {
+  const colors = ['#166534', '#1d4ed8', '#be123c', '#a16207', '#6d28d9', '#0f766e'];
+  return colors[Math.abs(Number(lineId)) % colors.length];
 }
 
 function animateMarker(marker, target) {
@@ -200,15 +221,25 @@ function animateMarker(marker, target) {
   requestAnimationFrame(step);
 }
 
-function clearMap() {
+function clearVisibleMap() {
   for (const marker of state.markers.values()) {
     marker.setMap(null);
   }
   state.markers.clear();
-  state.routeTrail = [];
   state.hasCenteredSelection = false;
-  if (state.routePolyline) {
-    state.routePolyline.setPath([]);
+  hideAllRoutePolylines();
+}
+
+function hideAllRoutePolylines() {
+  for (const polyline of state.routePolylines.values()) {
+    polyline.setVisible(false);
+  }
+}
+
+function showSelectedRoutePolyline() {
+  hideAllRoutePolylines();
+  if (state.selectedLineId > 0 && state.map) {
+    routePolyline(state.selectedLineId).setVisible(true);
   }
 }
 
@@ -280,8 +311,9 @@ async function getJson(path) {
 
 routeSelect.addEventListener('change', () => {
   state.selectedLineId = Number(routeSelect.value || 0);
-  clearMap();
+  clearVisibleMap();
   if (state.selectedLineId > 0) {
+    showSelectedRoutePolyline();
     refreshSelectedRoute();
     refreshMetric();
   } else {

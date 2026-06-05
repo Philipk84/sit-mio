@@ -33,7 +33,7 @@ final class PersistentHistoricalRepository implements HistoricalRepository {
 
     PersistentHistoricalRepository(String seedFile) {
         this.seedFile = Paths.projectFile(seedFile);
-        this.dbUrl = Env.value("MIO_DB_URL", "");
+        this.dbUrl = Env.value("MIO_DB_URL", "jdbc:postgresql://localhost:5432/mio");
         this.dbUser = Env.value("MIO_DB_USER", "postgres");
         this.dbPassword = Env.value("MIO_DB_PASSWORD", "postgres");
         if (isPostgresEnabled()) {
