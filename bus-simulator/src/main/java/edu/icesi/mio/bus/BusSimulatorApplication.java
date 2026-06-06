@@ -9,6 +9,12 @@ import edu.icesi.mio.common.Paths;
 
 import com.zeroc.Ice.Communicator;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -24,11 +30,11 @@ public final class BusSimulatorApplication {
     }
 
     public static void main(String[] args) throws Exception {
-        Path datagramsFile = resolveDatagramsFile(Env.value("MIO_BUS_DATAGRAMS_FILE",
-                "/mnt/mio-datos/datagrams-MiniPilot.csv"));
+        String datagramsSource = Env.value("MIO_BUS_DATAGRAMS_FILE",
+                "http://192.168.131.38:10002/datagrams-MiniPilot.csv");
         String ccoProxy = Env.value("MIO_DATAGRAM_RECEIVER_PROXY",
-                "DatagramReceiver:tcp -h mio-cco -p 10010");
-        int delayMs = Env.intValue("MIO_BUS_DELAY_MS", 250);
+                "DatagramReceiver:tcp -h 192.168.131.39 -p 10010");
+        int delayMs = Env.intValue("MIO_BUS_DELAY_MS", 1000);
         int limit = Env.intValue("MIO_BUS_LIMIT", 0);
         boolean loop = Env.booleanValue("MIO_BUS_LOOP", true);
         int simulatedLineId = Env.intValue("MIO_SIM_LINE_ID", 311);
@@ -39,12 +45,12 @@ public final class BusSimulatorApplication {
         try (Communicator communicator = IceSupport.communicator(args)) {
             DatagramReceiverPrx receiver = DatagramReceiverPrx.checkedCast(communicator.stringToProxy(ccoProxy));
             AtomicInteger sent = new AtomicInteger();
-            System.out.println("Bus simulator usando archivo=" + datagramsFile
+            System.out.println("Bus simulator usando archivo=" + datagramsSource
                     + ", ruta=" + simulatedLineId
                     + ", busSimulado=" + simulatedBusId
                     + ", busFuente=" + sourceBusId);
             do {
-                try (Stream<String> lines = Files.lines(datagramsFile)) {
+                try (Stream<String> lines = openDatagramLines(datagramsSource)) {
                     lines.map(CsvDatagramParser::parse)
                             .filter(optional -> optional.isPresent())
                             .map(optional -> optional.get())
@@ -64,6 +70,15 @@ public final class BusSimulatorApplication {
         return datagram.latitude > 0 && datagram.longitude < 0;
     }
 
+    private static Stream<String> openDatagramLines(String configuredSource) throws IOException {
+        if (isHttp(configuredSource)) {
+            InputStream input = new URL(configuredSource).openStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+            return reader.lines().onClose(() -> close(reader));
+        }
+        return Files.lines(resolveDatagramsFile(configuredSource));
+    }
+
     private static Path resolveDatagramsFile(String configuredFile) {
         Path configured = Paths.projectFile(configuredFile);
         if (Files.exists(configured)) {
@@ -76,6 +91,17 @@ public final class BusSimulatorApplication {
         }
         throw new IllegalStateException("No se encontro archivo de datagramas: " + configuredFile
                 + ". Define MIO_BUS_DATAGRAMS_FILE con una ruta valida.");
+    }
+
+    private static boolean isHttp(String value) {
+        return value.startsWith("http://") || value.startsWith("https://");
+    }
+
+    private static void close(BufferedReader reader) {
+        try {
+            reader.close();
+        } catch (IOException ignored) {
+        }
     }
 
     private static Datagram simulatedDatagram(Datagram source, int simulatedLineId, int simulatedBusId,

@@ -14,11 +14,11 @@ public final class CcoServerApplication {
     }
 
     public static void main(String[] args) {
-        String endpoints = Env.value("MIO_CCO_ENDPOINTS", "tcp -h mio-cco -p 10010");
+        String endpoints = Env.value("MIO_CCO_ENDPOINTS", "tcp -h 0.0.0.0 -p 10010");
         String historicalProxy = Env.value("MIO_HISTORICAL_PROXY",
-                "HistoricalRepository:tcp -h mio-datacenter -p 10001");
+                "HistoricalRepository:tcp -h 192.168.131.38 -p 10001");
         String operationalProxy = Env.value("MIO_OPERATIONAL_PROXY",
-                "OperationalRepository:tcp -h mio-datacenter -p 10001");
+                "OperationalRepository:tcp -h 192.168.131.38 -p 10001");
 
         try (Communicator communicator = IceSupport.communicator(args)) {
             HistoricalRepositoryPrx historicalRepository = HistoricalRepositoryPrx.checkedCast(

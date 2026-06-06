@@ -30,7 +30,7 @@ public final class WebGatewayApplication {
     }
 
     public static void main(String[] args) throws Exception {
-        String ccoEndpoint = Env.value("MIO_CCO_PROXY_ENDPOINT", "tcp -h mio-cco -p 10010");
+        String ccoEndpoint = Env.value("MIO_CCO_PROXY_ENDPOINT", "tcp -h 192.168.131.39 -p 10010");
         int port = Env.intValue("MIO_GATEWAY_PORT", 8080);
 
         Communicator communicator = IceSupport.communicator(args);

@@ -14,10 +14,9 @@ const types = {
 
 const server = http.createServer((req, res) => {
   if (req.url === '/config.js') {
-    const requestHost = (req.headers.host || 'mio-web').split(':')[0];
     res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
     res.end(`window.MIO_CONFIG=${JSON.stringify({
-      gatewayUrl: process.env.MIO_GATEWAY_URL || `http://${requestHost}:8080`,
+      gatewayUrl: process.env.MIO_GATEWAY_URL || 'http://192.168.131.40:8080',
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
     })};`);
     return;

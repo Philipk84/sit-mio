@@ -1,247 +1,213 @@
 # Despliegue distribuido en Ubuntu sin sudo
 
-Esta guia es para computadores Ubuntu en la misma red, sin permisos de `sudo`. La idea es copiar los JARs a una carpeta del usuario o una carpeta ya disponible, por ejemplo `/opt/swarch`, y ejecutar cada nodo con `java -cp`.
+Esta guia usa las IPs reales de la sala y evita depender de `/etc/hosts` o `sudo`.
 
-Como no se puede editar `/etc/hosts`, no dependemos de nombres como `mio-datacenter` o `mio-cco`. En cada comando se pasa la IP real del componente remoto con el que se comunica.
-
-## 1. IPs que deben identificar
-
-Antes de correr nada, anoten las IPs reales:
+## IPs finales
 
 ```text
-IP_DATACENTER = IP del computador donde corre Postgres + DataCenter
-IP_CCO        = IP del computador donde corre CCO Server
-IP_WEB        = IP del computador donde corre Web Gateway + Frontend
-IP_CSV        = IP o ruta del computador donde esta el CSV grande
+DataCenter + Postgres = 192.168.131.38
+CCO Server            = 192.168.131.39
+Web + Frontend        = 192.168.131.40
+CSV grande            = /opt/swarch/datacenter/datagrams-MiniPilot.csv
+CSV de rutas          = /opt/swarch/datacenter/lines-241-ActiveGT.csv
+DB user               = postgres
+DB password           = postgres
 ```
 
-En cada Ubuntu pueden ver su IP con:
+Los JARs generados desde este codigo ya quedan apuntando a esas IPs por defecto.
 
-```bash
-hostname -I
-```
-
-Ejemplo:
-
-```text
-IP_DATACENTER = 192.168.1.10
-IP_CCO        = 192.168.1.20
-IP_WEB        = 192.168.1.30
-```
-
-## 2. Puertos usados
-
-Estos puertos deben poder comunicarse en la red de la sala:
+## Puertos
 
 ```text
 10001  DataCenter Ice
+10002  DataCenter HTTP para servir datagrams-MiniPilot.csv a los buses
 10010  CCO Ice
 8080   Web Gateway HTTP
 3000   Frontend Node
-5432   Postgres, normalmente solo local en DataCenter
+5432   Postgres local en DataCenter
 ```
 
-Si un puerto esta bloqueado por firewall, deben pedir a quien administra la sala que lo habilite. Sin `sudo` no se puede abrir desde el usuario normal.
+Si algun puerto no responde, deben pedir a quien administra la sala que lo habilite.
 
-## 3. Artefactos a copiar
+## Construccion
 
-En la maquina de desarrollo construir:
+En la maquina de desarrollo:
 
 ```bash
 gradle --offline clean build
 ```
 
-Copiar a cada maquina estos archivos segun el nodo:
+Copiar a cada computador los JARs y `lib/` correspondientes.
 
-DataCenter:
+## 1. DataCenter
 
-```text
-common-1.0.0.jar
-datacenter-1.0.0.jar
-lib/ice-3.7.10.jar
-lib/postgresql-42.3.1.jar
-lines-241-ActiveGT.csv
-```
-
-CCO:
-
-```text
-common-1.0.0.jar
-cco-server-1.0.0.jar
-lib/ice-3.7.10.jar
-lib/postgresql-42.3.1.jar
-```
-
-Web Gateway:
-
-```text
-common-1.0.0.jar
-web-gateway-1.0.0.jar
-lib/ice-3.7.10.jar
-lib/postgresql-42.3.1.jar
-```
-
-Frontend:
-
-```text
-frontend/
-```
-
-Bus:
-
-```text
-common-1.0.0.jar
-bus-simulator-1.0.0.jar
-lib/ice-3.7.10.jar
-lib/postgresql-42.3.1.jar
-```
-
-Ejemplo de estructura como la que ya tienes:
+Carpeta esperada:
 
 ```text
 /opt/swarch/datacenter/
   common-1.0.0.jar
   datacenter-1.0.0.jar
+  datagrams-MiniPilot.csv
   lines-241-ActiveGT.csv
   lib/
     ice-3.7.10.jar
     postgresql-42.3.1.jar
 ```
 
-El classpath en Linux usa `:`:
-
-```bash
-java -cp "lib/*:common-1.0.0.jar:NODO-1.0.0.jar" CLASE_PRINCIPAL
-```
-
-## 4. DataCenter
-
-Corre en el computador `IP_DATACENTER`.
-
-Como el DataCenter es servidor Ice, debe escuchar en todas las interfaces:
-
-```bash
-MIO_DATACENTER_ENDPOINTS='tcp -h 0.0.0.0 -p 10001'
-```
-
-Comando ejemplo:
+Comando normal:
 
 ```bash
 cd /opt/swarch/datacenter
 
-MIO_DATACENTER_ENDPOINTS='tcp -h 0.0.0.0 -p 10001' \
-MIO_DB_URL='jdbc:postgresql://localhost:5432/mio' \
-MIO_DB_USER='postgres' \
-MIO_DB_PASSWORD='postgres' \
-MIO_DATAGRAMS_FILE='/ruta/real/al/datagrams-MiniPilot.csv' \
-MIO_ROUTES_FILE='/opt/swarch/datacenter/lines-241-ActiveGT.csv' \
 java -cp "lib/*:common-1.0.0.jar:datacenter-1.0.0.jar" edu.icesi.mio.datacenter.DataCenterApplication
 ```
 
-Si el DataCenter no necesita cargar historico completo al inicio o quieren usar un CSV pequeño, cambia `MIO_DATAGRAMS_FILE` por el archivo que tengan disponible.
+Defaults ya embebidos:
 
-Importante:
-
-- No uses `mio-datacenter` si no existe en DNS.
-- No uses la IP del DataCenter en `-h` para arrancar si da problemas; `0.0.0.0` es lo correcto para escuchar.
-- Si Postgres esta en el mismo computador, `localhost` en `MIO_DB_URL` esta bien.
-
-## 5. CCO Server
-
-Corre en el computador `IP_CCO`.
-
-El CCO escucha como servidor en `0.0.0.0`, pero se conecta al DataCenter usando `IP_DATACENTER`.
-
-Reemplaza `192.168.1.10` por la IP real del DataCenter:
-
-```bash
-cd /opt/swarch/cco
-
-MIO_CCO_ENDPOINTS='tcp -h 0.0.0.0 -p 10010' \
-MIO_HISTORICAL_PROXY='HistoricalRepository:tcp -h 192.168.1.10 -p 10001' \
-MIO_OPERATIONAL_PROXY='OperationalRepository:tcp -h 192.168.1.10 -p 10001' \
-MIO_CCO_WORKERS='4' \
-java -cp "lib/*:common-1.0.0.jar:cco-server-1.0.0.jar" edu.icesi.mio.cco.CcoServerApplication
+```text
+MIO_DATACENTER_ENDPOINTS=tcp -h 0.0.0.0 -p 10001
+MIO_DB_URL=jdbc:postgresql://localhost:5432/mio
+MIO_DB_USER=postgres
+MIO_DB_PASSWORD=postgres
+MIO_DATAGRAMS_FILE=/opt/swarch/datacenter/datagrams-MiniPilot.csv
+MIO_ROUTES_FILE=/opt/swarch/datacenter/lines-241-ActiveGT.csv
+MIO_DATAGRAMS_HTTP_PORT=10002
 ```
 
-Si el DataCenter esta en `10.0.0.25`, entonces ambos proxies deben usar `10.0.0.25`.
+El DataCenter tambien publica el CSV para los buses en:
 
-## 6. Web Gateway
-
-Corre en el computador `IP_WEB`.
-
-El gateway se conecta al CCO usando `IP_CCO`.
-
-Reemplaza `192.168.1.20` por la IP real del CCO:
-
-```bash
-cd /opt/swarch/gateway
-
-MIO_CCO_PROXY_ENDPOINT='tcp -h 192.168.1.20 -p 10010' \
-MIO_GATEWAY_PORT='8080' \
-java -cp "lib/*:common-1.0.0.jar:web-gateway-1.0.0.jar" edu.icesi.mio.gateway.WebGatewayApplication
-```
-
-Prueba desde el computador del gateway:
-
-```bash
-curl http://localhost:8080/api/routes
+```text
+http://192.168.131.38:10002/datagrams-MiniPilot.csv
 ```
 
 Prueba desde otro computador:
 
 ```bash
-curl http://IP_WEB:8080/api/routes
+curl -I http://192.168.131.38:10002/datagrams-MiniPilot.csv
 ```
 
-## 7. Frontend Node
+## 2. CCO Server
 
-Corre en el computador `IP_WEB`, normalmente junto al Web Gateway.
+Carpeta esperada:
 
-Reemplaza `192.168.1.30` por la IP real del computador web. Esa URL debe ser alcanzable desde el navegador.
+```text
+/opt/swarch/cco/
+  common-1.0.0.jar
+  cco-server-1.0.0.jar
+  lib/
+    ice-3.7.10.jar
+    postgresql-42.3.1.jar
+```
+
+Comando normal:
+
+```bash
+cd /opt/swarch/cco
+
+java -cp "lib/*:common-1.0.0.jar:cco-server-1.0.0.jar" edu.icesi.mio.cco.CcoServerApplication
+```
+
+Defaults ya embebidos:
+
+```text
+MIO_CCO_ENDPOINTS=tcp -h 0.0.0.0 -p 10010
+MIO_HISTORICAL_PROXY=HistoricalRepository:tcp -h 192.168.131.38 -p 10001
+MIO_OPERATIONAL_PROXY=OperationalRepository:tcp -h 192.168.131.38 -p 10001
+MIO_CCO_WORKERS=4
+```
+
+## 3. Web Gateway
+
+Carpeta esperada:
+
+```text
+/opt/swarch/gateway/
+  common-1.0.0.jar
+  web-gateway-1.0.0.jar
+  lib/
+    ice-3.7.10.jar
+    postgresql-42.3.1.jar
+```
+
+Comando normal:
+
+```bash
+cd /opt/swarch/gateway
+
+java -cp "lib/*:common-1.0.0.jar:web-gateway-1.0.0.jar" edu.icesi.mio.gateway.WebGatewayApplication
+```
+
+Defaults ya embebidos:
+
+```text
+MIO_CCO_PROXY_ENDPOINT=tcp -h 192.168.131.39 -p 10010
+MIO_GATEWAY_PORT=8080
+```
+
+Prueba:
+
+```bash
+curl http://192.168.131.40:8080/api/routes
+```
+
+## 4. Frontend Node
+
+Carpeta esperada:
+
+```text
+/opt/swarch/frontend/
+  server.cjs
+  public/
+```
+
+Comando:
 
 ```bash
 cd /opt/swarch/frontend
 
-MIO_GATEWAY_URL='http://192.168.1.30:8080' \
 GOOGLE_MAPS_API_KEY='TU_API_KEY' \
 FRONTEND_PORT='3000' \
 node server.cjs
 ```
 
-Abrir en el navegador:
+Default ya embebido:
 
 ```text
-http://192.168.1.30:3000
+MIO_GATEWAY_URL=http://192.168.131.40:8080
 ```
 
-Si en tu copia la carpeta es `/opt/swarch/frontend/frontend`, entonces entra a la carpeta padre que contiene `server.cjs` o ejecuta:
+Abrir:
 
-```bash
-node frontend/server.cjs
+```text
+http://192.168.131.40:3000
 ```
 
-## 8. Buses simulados
+## 5. Buses simulados
 
-Cada bus corre como proceso independiente, en uno o varios computadores.
+Carpeta esperada:
 
-Cada bus se conecta al CCO usando `IP_CCO`.
+```text
+/opt/swarch/bus/
+  common-1.0.0.jar
+  bus-simulator-1.0.0.jar
+  lib/
+    ice-3.7.10.jar
+    postgresql-42.3.1.jar
+```
 
-Reemplaza:
+Los buses no necesitan tener el CSV grande localmente. Por defecto lo leen desde el DataCenter:
 
-- `192.168.1.20` por la IP real del CCO.
-- `/ruta/real/al/datagrams-MiniPilot.csv` por el path donde ese computador pueda leer el CSV grande.
-- `MIO_SIM_BUS_ID`, `MIO_SIM_LINE_ID`, `MIO_SOURCE_BUS_ID` segun el bus que quieran simular.
+```text
+MIO_BUS_DATAGRAMS_FILE=http://192.168.131.38:10002/datagrams-MiniPilot.csv
+MIO_DATAGRAM_RECEIVER_PROXY=DatagramReceiver:tcp -h 192.168.131.39 -p 10010
+MIO_BUS_DELAY_MS=1000
+```
 
-Ejemplo:
+Bus ejemplo:
 
 ```bash
 cd /opt/swarch/bus
 
-MIO_DATAGRAM_RECEIVER_PROXY='DatagramReceiver:tcp -h 192.168.1.20 -p 10010' \
-MIO_BUS_DATAGRAMS_FILE='/ruta/real/al/datagrams-MiniPilot.csv' \
-MIO_BUS_DELAY_MS='1000' \
-MIO_BUS_LOOP='true' \
 MIO_SIM_LINE_ID='306' \
 MIO_SIM_BUS_ID='9101' \
 MIO_SOURCE_BUS_ID='1203' \
@@ -253,10 +219,6 @@ Segundo bus en la misma ruta:
 ```bash
 cd /opt/swarch/bus
 
-MIO_DATAGRAM_RECEIVER_PROXY='DatagramReceiver:tcp -h 192.168.1.20 -p 10010' \
-MIO_BUS_DATAGRAMS_FILE='/ruta/real/al/datagrams-MiniPilot.csv' \
-MIO_BUS_DELAY_MS='1000' \
-MIO_BUS_LOOP='true' \
 MIO_SIM_LINE_ID='306' \
 MIO_SIM_BUS_ID='9102' \
 MIO_SOURCE_BUS_ID='190' \
@@ -265,87 +227,77 @@ java -cp "lib/*:common-1.0.0.jar:bus-simulator-1.0.0.jar" edu.icesi.mio.bus.BusS
 
 Reglas:
 
-- `MIO_SIM_BUS_ID` debe ser unico por cada bus activo.
-- `MIO_SIM_LINE_ID` puede repetirse si quieren dos buses en la misma ruta.
-- `MIO_SOURCE_BUS_ID` debe existir en el CSV para esa ruta, si no el simulador no tendra puntos para enviar.
+- `MIO_SIM_BUS_ID` debe ser unico por cada proceso activo.
+- `MIO_SIM_LINE_ID` puede repetirse si quieren varios buses en la misma ruta.
+- `MIO_SOURCE_BUS_ID` debe existir en el CSV para esa ruta.
 
-## 9. Orden de arranque
+## Orden de arranque
 
-1. Postgres en el computador del DataCenter.
-2. DataCenter.
-3. CCO Server.
-4. Web Gateway.
-5. Frontend Node.
+1. Postgres en `192.168.131.38`.
+2. DataCenter en `192.168.131.38`.
+3. CCO Server en `192.168.131.39`.
+4. Web Gateway en `192.168.131.40`.
+5. Frontend Node en `192.168.131.40`.
 6. Buses simulados.
 
-## 10. Pruebas rapidas sin sudo
+## Pruebas
 
-Ver IP local:
+DataCenter Ice:
 
 ```bash
-hostname -I
+nc -vz 192.168.131.38 10001
 ```
 
-Ver si un puerto responde:
+CSV remoto para buses:
 
 ```bash
-nc -vz IP_DATACENTER 10001
-nc -vz IP_CCO 10010
-nc -vz IP_WEB 8080
-nc -vz IP_WEB 3000
+curl -I http://192.168.131.38:10002/datagrams-MiniPilot.csv
 ```
 
-Probar API:
+CCO Ice:
 
 ```bash
-curl http://IP_WEB:8080/api/routes
-curl 'http://IP_WEB:8080/api/positions?lineId=306'
-curl 'http://IP_WEB:8080/api/route-details?lineId=306'
+nc -vz 192.168.131.39 10010
 ```
 
-Si `nc` no existe:
+Gateway:
 
 ```bash
-timeout 3 bash -c '</dev/tcp/IP_CCO/10010' && echo OK || echo FALLO
+curl http://192.168.131.40:8080/api/routes
+curl 'http://192.168.131.40:8080/api/positions?lineId=306'
+curl 'http://192.168.131.40:8080/api/route-details?lineId=306'
 ```
 
-## 11. Errores comunes
+Frontend:
 
-`UnknownHostException: mio-datacenter`
+```text
+http://192.168.131.40:3000
+```
 
-Significa que el JAR intento usar el hostname embebido, pero esa maquina no resuelve el nombre. Solucion: pasar la IP o escuchar en `0.0.0.0`:
+## Errores comunes
+
+`UnknownHostException`
+
+No deberia pasar con estos JARs porque ya no dependen de `mio-datacenter` ni `mio-cco`. Si pasa, estan usando un JAR viejo.
+
+`NoSuchFileException: datagrams-MiniPilot.csv`
+
+En DataCenter, revisar:
 
 ```bash
-MIO_DATACENTER_ENDPOINTS='tcp -h 0.0.0.0 -p 10001'
+ls -lh /opt/swarch/datacenter/datagrams-MiniPilot.csv
+```
+
+En buses, probar:
+
+```bash
+curl -I http://192.168.131.38:10002/datagrams-MiniPilot.csv
 ```
 
 `Connection refused`
 
-El proceso destino no esta corriendo o el puerto no esta abierto.
+El proceso destino no esta corriendo o el puerto no esta disponible.
 
 `No route to host` o timeout
 
-Las maquinas no se ven en la red o hay firewall de la sala.
-
-`NoSuchFileException` para el CSV
-
-El path del CSV no existe en ese computador. Revisar:
-
-```bash
-ls -lh /ruta/real/al/datagrams-MiniPilot.csv
-```
-
-## 12. Plantilla rapida de IPs
-
-Antes de iniciar, llenen esto:
-
-```text
-IP_DATACENTER =
-IP_CCO =
-IP_WEB =
-CSV_PATH_DATACENTER =
-CSV_PATH_BUSES =
-ROUTES_PATH =
-```
-
-Y luego reemplacen esos valores en los comandos anteriores.
+Las maquinas no se ven entre si o hay firewall de la sala.

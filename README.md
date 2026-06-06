@@ -150,10 +150,10 @@ Luego abrir `http://127.0.0.1:3000`.
 
 ## Variables utiles
 
-- `MIO_DATAGRAMS_FILE`: CSV historico para DataCenter. Default de despliegue: `/mnt/mio-datos/datagrams-MiniPilot.csv`.
-- `MIO_BUS_DATAGRAMS_FILE`: CSV usado por el simulador. Default de despliegue: `/mnt/mio-datos/datagrams-MiniPilot.csv`.
+- `MIO_DATAGRAMS_FILE`: CSV historico para DataCenter. Default de despliegue: `/opt/swarch/datacenter/datagrams-MiniPilot.csv`.
+- `MIO_BUS_DATAGRAMS_FILE`: CSV usado por el simulador. Default de despliegue: `http://192.168.131.38:10002/datagrams-MiniPilot.csv`.
   El resolvedor busca tambien carpetas hermanas como `D:\IngeSoft4\datagrams-MiniPilot\datagrams-MiniPilot.csv`. Si no lo encuentra, usa `chunck.csv` como fallback para demo.
-- `MIO_ROUTES_FILE`: CSV de rutas. Default de despliegue: `/opt/mio/lines-241-ActiveGT.csv`.
+- `MIO_ROUTES_FILE`: CSV de rutas. Default de despliegue: `/opt/swarch/datacenter/lines-241-ActiveGT.csv`.
 - `MIO_GATEWAY_PORT`: puerto HTTP del gateway. Default: `8080`.
 - `FRONTEND_PORT`: puerto del frontend Node. Default: `3000`.
 - `GOOGLE_MAPS_API_KEY`: llave de Google Maps para renderizar el mapa.
@@ -168,7 +168,7 @@ Luego abrir `http://127.0.0.1:3000`.
 - `MIO_BUS_DELAY_MS`: pausa entre datagramas enviados. Default: `250`.
 - `MIO_BUS_LIMIT`: cantidad maxima de datagramas por vuelta del archivo. Default: sin limite.
 
-Para usar el historico grande del piloto en Ubuntu, montar el archivo en `/mnt/mio-datos/datagrams-MiniPilot.csv`.
+Para usar el historico grande del piloto en Ubuntu, ubicarlo en `/opt/swarch/datacenter/datagrams-MiniPilot.csv`. El DataCenter lo publica por HTTP para que los buses lo lean sin tener copia local.
 
 Ejemplo Postgres:
 
