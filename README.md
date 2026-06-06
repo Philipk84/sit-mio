@@ -13,7 +13,7 @@ Solucion base para los requerimientos RF4 y RF7 del parcial SITM-MIO.
 
 - `bus-simulator`: representa un nodo BUS SIT-MIO. Lee datagramas CSV de una ruta, fuerza un `busId` configurable y los envia recurrentemente por Ice al CCO para evidenciar movimiento.
 - `cco-server`: representa el Servidor CCO. Recibe datagramas, actualiza posiciones, expone rutas y calcula metricas.
-- `datacenter`: representa el Centro de Datos. Expone repositorio operativo e historico por Ice y persiste datagramas en Postgres. Por defecto usa `jdbc:postgresql://localhost:5432/mio`.
+- `datacenter`: representa el Centro de Datos. Expone repositorio operativo e historico por Ice y persiste datagramas en Postgres. Por defecto usa `jdbc:postgresql://localhost:5432/mio` y endpoints preparados para despliegue LAN con el hostname `mio-datacenter`.
 - `web-gateway`: puente HTTP/JSON para el navegador. Internamente consume servicios Ice del CCO.
 - `frontend`: servidor Node.js estatico para la UI. Al abrir, no pinta todas las rutas; primero detecta rutas activas y el usuario elige cual ver.
 
@@ -150,10 +150,10 @@ Luego abrir `http://127.0.0.1:3000`.
 
 ## Variables utiles
 
-- `MIO_DATAGRAMS_FILE`: CSV historico para DataCenter. Default: `chunck.csv`.
-- `MIO_BUS_DATAGRAMS_FILE`: CSV usado por el simulador. Default: `datagrams-MiniPilot.csv`.
+- `MIO_DATAGRAMS_FILE`: CSV historico para DataCenter. Default de despliegue: `/mnt/mio-datos/datagrams-MiniPilot.csv`.
+- `MIO_BUS_DATAGRAMS_FILE`: CSV usado por el simulador. Default de despliegue: `/mnt/mio-datos/datagrams-MiniPilot.csv`.
   El resolvedor busca tambien carpetas hermanas como `D:\IngeSoft4\datagrams-MiniPilot\datagrams-MiniPilot.csv`. Si no lo encuentra, usa `chunck.csv` como fallback para demo.
-- `MIO_ROUTES_FILE`: CSV de rutas. Default: `lines-241-ActiveGT.csv`.
+- `MIO_ROUTES_FILE`: CSV de rutas. Default de despliegue: `/opt/mio/lines-241-ActiveGT.csv`.
 - `MIO_GATEWAY_PORT`: puerto HTTP del gateway. Default: `8080`.
 - `FRONTEND_PORT`: puerto del frontend Node. Default: `3000`.
 - `GOOGLE_MAPS_API_KEY`: llave de Google Maps para renderizar el mapa.
@@ -168,7 +168,7 @@ Luego abrir `http://127.0.0.1:3000`.
 - `MIO_BUS_DELAY_MS`: pausa entre datagramas enviados. Default: `250`.
 - `MIO_BUS_LIMIT`: cantidad maxima de datagramas por vuelta del archivo. Default: sin limite.
 
-Para usar el historico grande del piloto, definir `MIO_DATAGRAMS_FILE=datagrams-MiniPilot.csv`.
+Para usar el historico grande del piloto en Ubuntu, montar el archivo en `/mnt/mio-datos/datagrams-MiniPilot.csv`.
 
 Ejemplo Postgres:
 
@@ -181,4 +181,4 @@ gradle --offline :datacenter:run
 
 ## Despliegue en maquinas separadas
 
-La guia de despliegue por JAR, classpath de Ice, IPs LAN, puertos y variables por nodo esta en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+La guia de despliegue Ubuntu por JAR, classpath de Ice, hostnames LAN, puertos y variables minimas por bus esta en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

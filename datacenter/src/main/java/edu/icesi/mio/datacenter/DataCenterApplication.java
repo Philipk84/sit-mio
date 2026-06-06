@@ -14,9 +14,9 @@ public final class DataCenterApplication {
     }
 
     public static void main(String[] args) {
-        String datagramsFile = Env.value("MIO_DATAGRAMS_FILE", "chunck.csv");
-        String routesFile = Env.value("MIO_ROUTES_FILE", "lines-241-ActiveGT.csv");
-        String endpoints = Env.value("MIO_DATACENTER_ENDPOINTS", "tcp -h 127.0.0.1 -p 10001");
+        String datagramsFile = Env.value("MIO_DATAGRAMS_FILE", "/mnt/mio-datos/datagrams-MiniPilot.csv");
+        String routesFile = Env.value("MIO_ROUTES_FILE", "/opt/mio/lines-241-ActiveGT.csv");
+        String endpoints = Env.value("MIO_DATACENTER_ENDPOINTS", "tcp -h mio-datacenter -p 10001");
 
         try (Communicator communicator = IceSupport.communicator(args)) {
             ObjectAdapter adapter = IceSupport.adapter(communicator, "DataCenterAdapter", endpoints);

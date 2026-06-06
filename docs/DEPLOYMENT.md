@@ -1,175 +1,238 @@
-# Despliegue distribuido en sala
+# Despliegue distribuido en Ubuntu
 
-Esta guia asume que los computadores estan en la misma red LAN y que se quiere ejecutar cada nodo pasando JARs y variables de entorno, sin Gradle en las maquinas destino.
+Esta guia esta pensada para computadores Linux Ubuntu en la misma red LAN. La idea es copiar JARs y dependencias a cada equipo y ejecutar con `java -cp`, sin Gradle en las maquinas de despliegue.
 
-## Maquinas sugeridas
+## Defaults embebidos
 
-Reemplaza las IP por las reales de la sala:
+Los JARs quedan preparados para esta topologia usando nombres de red fijos:
 
-- DataCenter + Postgres: `192.168.1.10`
-- CCO Server: `192.168.1.20`
-- Web Gateway + Frontend Node: `192.168.1.30`
-- Buses simulados: `192.168.1.41`, `192.168.1.42`, etc.
-- Computador con CSV grande compartido: `\\PC-SALA\datos\datagrams-MiniPilot.csv`
+- `mio-datacenter`: maquina con Postgres y DataCenter.
+- `mio-cco`: maquina con CCO Server.
+- `mio-web`: maquina con Web Gateway y Frontend Node.
+- CSV grande compartido/montado en buses y DataCenter: `/mnt/mio-datos/datagrams-MiniPilot.csv`.
+- Rutas del MIO en DataCenter: `/opt/mio/lines-241-ActiveGT.csv`.
 
-Puertos que deben estar abiertos:
+Con esto no hay que pasar endpoints Ice a cada comando. Solo se debe configurar una vez la resolucion de nombres en DNS o `/etc/hosts`.
+
+Ejemplo de `/etc/hosts` en todos los computadores:
+
+```bash
+192.168.1.10 mio-datacenter
+192.168.1.20 mio-cco
+192.168.1.30 mio-web
+```
+
+Reemplaza las IP por las reales de la sala.
+
+## Puertos
+
+Abrir estos puertos en la LAN:
 
 - DataCenter Ice: `10001/tcp`
 - CCO Ice: `10010/tcp`
 - Web Gateway HTTP: `8080/tcp`
 - Frontend Node HTTP: `3000/tcp`
-- Postgres: `5432/tcp`, solo necesario desde el DataCenter si Postgres esta en otra maquina.
+- Postgres: `5432/tcp`, solo si Postgres se consulta desde otra maquina.
 
-## Artefactos a copiar
+En Ubuntu, si `ufw` esta activo:
 
-Primero construir en la maquina de desarrollo:
+```bash
+sudo ufw allow 10001/tcp
+sudo ufw allow 10010/tcp
+sudo ufw allow 8080/tcp
+sudo ufw allow 3000/tcp
+```
 
-```powershell
+## Construir artefactos
+
+En la maquina de desarrollo:
+
+```bash
 gradle --offline clean build
 ```
 
-Para cada maquina Java, copiar estos archivos:
+Copiar a cada maquina solo lo que necesite:
 
-- `common/build/libs/common-1.0.0.jar`
-- `lib/ice-3.7.10.jar`
-- `lib/postgresql-42.3.1.jar`
-- El JAR del nodo que corresponda:
-  - DataCenter: `datacenter/build/libs/datacenter-1.0.0.jar`
-  - CCO: `cco-server/build/libs/cco-server-1.0.0.jar`
-  - Bus: `bus-simulator/build/libs/bus-simulator-1.0.0.jar`
-  - Web Gateway: `web-gateway/build/libs/web-gateway-1.0.0.jar`
+- Siempre:
+  - `common/build/libs/common-1.0.0.jar`
+  - `lib/ice-3.7.10.jar`
+  - `lib/postgresql-42.3.1.jar`
+- DataCenter:
+  - `datacenter/build/libs/datacenter-1.0.0.jar`
+  - `lines-241-ActiveGT.csv`
+- CCO:
+  - `cco-server/build/libs/cco-server-1.0.0.jar`
+- Bus:
+  - `bus-simulator/build/libs/bus-simulator-1.0.0.jar`
+- Web Gateway:
+  - `web-gateway/build/libs/web-gateway-1.0.0.jar`
+- Frontend:
+  - carpeta `frontend/`
 
-Estructura recomendada en cada maquina:
+Estructura recomendada:
 
 ```text
-C:\mio\
+/opt/mio/
   common-1.0.0.jar
   datacenter-1.0.0.jar
   cco-server-1.0.0.jar
   bus-simulator-1.0.0.jar
   web-gateway-1.0.0.jar
-  lib\
+  lines-241-ActiveGT.csv
+  lib/
     ice-3.7.10.jar
     postgresql-42.3.1.jar
-  lines-241-ActiveGT.csv
+  frontend/
 ```
 
-No es obligatorio copiar todos los JARs a todas las maquinas; basta con `common`, `lib` y el JAR del nodo que se va a ejecutar.
+Crear carpeta:
 
-Si prefieres pasar el path exacto de Ice al correr:
-
-```powershell
-$env:ICE_JAR='C:\mio\lib\ice-3.7.10.jar'
-$env:PG_JAR='C:\mio\lib\postgresql-42.3.1.jar'
+```bash
+sudo mkdir -p /opt/mio /mnt/mio-datos
+sudo chown -R "$USER:$USER" /opt/mio /mnt/mio-datos
 ```
 
-Luego usa `"$env:ICE_JAR;$env:PG_JAR;common-1.0.0.jar;NODO-1.0.0.jar"` como classpath.
+## CSV grande
 
-## 1. DataCenter + Postgres
+El default de los JARs busca el historico grande en:
 
-En la maquina `192.168.1.10`, crear la base de datos `mio` en Postgres y dejar el puerto `5432` disponible localmente para el DataCenter.
-
-```powershell
-cd C:\mio
-$env:MIO_DATACENTER_ENDPOINTS='tcp -h 192.168.1.10 -p 10001'
-$env:MIO_DB_URL='jdbc:postgresql://localhost:5432/mio'
-$env:MIO_DB_USER='postgres'
-$env:MIO_DB_PASSWORD='postgres'
-$env:MIO_DATAGRAMS_FILE='\\PC-SALA\datos\datagrams-MiniPilot.csv'
-$env:MIO_ROUTES_FILE='C:\mio\lines-241-ActiveGT.csv'
-java -cp "lib\*;common-1.0.0.jar;datacenter-1.0.0.jar" edu.icesi.mio.datacenter.DataCenterApplication
+```text
+/mnt/mio-datos/datagrams-MiniPilot.csv
 ```
 
-Con path explicito de Ice:
+Si el CSV esta en otro computador Linux, se puede montar por NFS o Samba/CIFS en `/mnt/mio-datos`. Ejemplo CIFS:
 
-```powershell
-java -cp "$env:ICE_JAR;$env:PG_JAR;common-1.0.0.jar;datacenter-1.0.0.jar" edu.icesi.mio.datacenter.DataCenterApplication
+```bash
+sudo apt-get update
+sudo apt-get install -y cifs-utils
+sudo mount -t cifs //IP_O_PC_DATOS/compartido /mnt/mio-datos -o username=USUARIO,vers=3.0
 ```
 
-## 2. CCO Server
+Debe quedar disponible:
 
-En la maquina `192.168.1.20`:
-
-```powershell
-cd C:\mio
-$env:MIO_CCO_ENDPOINTS='tcp -h 192.168.1.20 -p 10010'
-$env:MIO_HISTORICAL_PROXY='HistoricalRepository:tcp -h 192.168.1.10 -p 10001'
-$env:MIO_OPERATIONAL_PROXY='OperationalRepository:tcp -h 192.168.1.10 -p 10001'
-$env:MIO_CCO_WORKERS='4'
-$env:MIO_DATAGRAM_QUEUE_CAPACITY='100000'
-java -cp "lib\*;common-1.0.0.jar;cco-server-1.0.0.jar" edu.icesi.mio.cco.CcoServerApplication
+```bash
+ls -lh /mnt/mio-datos/datagrams-MiniPilot.csv
 ```
 
-## 3. Web Gateway
+## Comandos por maquina
 
-En la maquina `192.168.1.30`:
+Los comandos usan classpath Linux con `:`. Si quieres pasar el path de Ice explicitamente:
 
-```powershell
-cd C:\mio
-$env:MIO_CCO_PROXY_ENDPOINT='tcp -h 192.168.1.20 -p 10010'
-$env:MIO_GATEWAY_PORT='8080'
-java -cp "lib\*;common-1.0.0.jar;web-gateway-1.0.0.jar" edu.icesi.mio.gateway.WebGatewayApplication
+```bash
+export ICE_JAR=/opt/mio/lib/ice-3.7.10.jar
+export PG_JAR=/opt/mio/lib/postgresql-42.3.1.jar
 ```
 
-El navegador consumira este gateway por HTTP, por ejemplo `http://192.168.1.30:8080`.
+### 1. DataCenter + Postgres
 
-## 4. Frontend Node
+En `mio-datacenter`:
 
-Copiar la carpeta `frontend` completa a la maquina `192.168.1.30`. Luego:
-
-```powershell
-cd C:\mio
-$env:MIO_GATEWAY_URL='http://192.168.1.30:8080'
-$env:GOOGLE_MAPS_API_KEY='TU_API_KEY'
-$env:FRONTEND_PORT='3000'
-node frontend\server.cjs
+```bash
+cd /opt/mio
+java -cp "lib/*:common-1.0.0.jar:datacenter-1.0.0.jar" edu.icesi.mio.datacenter.DataCenterApplication
 ```
 
-Abrir desde cualquier equipo de la red:
+Equivalente con path explicito de Ice:
+
+```bash
+cd /opt/mio
+java -cp "$ICE_JAR:$PG_JAR:common-1.0.0.jar:datacenter-1.0.0.jar" edu.icesi.mio.datacenter.DataCenterApplication
+```
+
+Defaults que ya trae:
+
+- `MIO_DATACENTER_ENDPOINTS=tcp -h mio-datacenter -p 10001`
+- `MIO_DB_URL=jdbc:postgresql://localhost:5432/mio`
+- `MIO_DATAGRAMS_FILE=/mnt/mio-datos/datagrams-MiniPilot.csv`
+- `MIO_ROUTES_FILE=/opt/mio/lines-241-ActiveGT.csv`
+
+### 2. CCO Server
+
+En `mio-cco`:
+
+```bash
+cd /opt/mio
+java -cp "lib/*:common-1.0.0.jar:cco-server-1.0.0.jar" edu.icesi.mio.cco.CcoServerApplication
+```
+
+Defaults que ya trae:
+
+- `MIO_CCO_ENDPOINTS=tcp -h mio-cco -p 10010`
+- `MIO_HISTORICAL_PROXY=HistoricalRepository:tcp -h mio-datacenter -p 10001`
+- `MIO_OPERATIONAL_PROXY=OperationalRepository:tcp -h mio-datacenter -p 10001`
+
+### 3. Web Gateway
+
+En `mio-web`:
+
+```bash
+cd /opt/mio
+java -cp "lib/*:common-1.0.0.jar:web-gateway-1.0.0.jar" edu.icesi.mio.gateway.WebGatewayApplication
+```
+
+Defaults que ya trae:
+
+- `MIO_CCO_PROXY_ENDPOINT=tcp -h mio-cco -p 10010`
+- `MIO_GATEWAY_PORT=8080`
+
+### 4. Frontend Node
+
+En `mio-web`:
+
+```bash
+cd /opt/mio
+export GOOGLE_MAPS_API_KEY=TU_API_KEY
+node frontend/server.cjs
+```
+
+El frontend escucha en `0.0.0.0:3000`. La URL del gateway se calcula automaticamente con el mismo host desde donde se abra el navegador, por ejemplo:
+
+```text
+http://mio-web:3000
+```
+
+Si los computadores cliente no resuelven `mio-web`, abrir con IP:
 
 ```text
 http://192.168.1.30:3000
 ```
 
-## 5. Buses simulados
+### 5. Buses simulados
 
-Cada bus se ejecuta como un proceso independiente. En cada maquina de bus:
+En cada maquina de bus:
 
-```powershell
-cd C:\mio
-$env:MIO_DATAGRAM_RECEIVER_PROXY='DatagramReceiver:tcp -h 192.168.1.20 -p 10010'
-$env:MIO_BUS_DATAGRAMS_FILE='\\PC-SALA\datos\datagrams-MiniPilot.csv'
-$env:MIO_BUS_DELAY_MS='250'
-$env:MIO_BUS_LOOP='true'
-$env:MIO_SIM_LINE_ID='306'
-$env:MIO_SIM_BUS_ID='9101'
-$env:MIO_SOURCE_BUS_ID='1203'
-java -cp "lib\*;common-1.0.0.jar;bus-simulator-1.0.0.jar" edu.icesi.mio.bus.BusSimulatorApplication
+```bash
+cd /opt/mio
+java -cp "lib/*:common-1.0.0.jar:bus-simulator-1.0.0.jar" edu.icesi.mio.bus.BusSimulatorApplication
 ```
 
-Otro bus de la misma ruta, en otra terminal o maquina:
+Defaults que ya trae:
 
-```powershell
-cd C:\mio
-$env:MIO_DATAGRAM_RECEIVER_PROXY='DatagramReceiver:tcp -h 192.168.1.20 -p 10010'
-$env:MIO_BUS_DATAGRAMS_FILE='\\PC-SALA\datos\datagrams-MiniPilot.csv'
-$env:MIO_BUS_DELAY_MS='250'
-$env:MIO_BUS_LOOP='true'
-$env:MIO_SIM_LINE_ID='306'
-$env:MIO_SIM_BUS_ID='9102'
-$env:MIO_SOURCE_BUS_ID='190'
-java -cp "lib\*;common-1.0.0.jar;bus-simulator-1.0.0.jar" edu.icesi.mio.bus.BusSimulatorApplication
+- `MIO_DATAGRAM_RECEIVER_PROXY=DatagramReceiver:tcp -h mio-cco -p 10010`
+- `MIO_BUS_DATAGRAMS_FILE=/mnt/mio-datos/datagrams-MiniPilot.csv`
+- `MIO_BUS_LOOP=true`
+- `MIO_BUS_DELAY_MS=250`
+- `MIO_SIM_LINE_ID=311`
+- `MIO_SIM_BUS_ID=9001`
+- `MIO_SOURCE_BUS_ID=846`
+
+Para correr varios buses distintos, cada proceso debe tener un `MIO_SIM_BUS_ID` unico. Esa es la unica configuracion que no conviene dejar igual para todos. Ejemplo de dos buses en la misma ruta:
+
+```bash
+cd /opt/mio
+MIO_SIM_LINE_ID=306 MIO_SIM_BUS_ID=9101 MIO_SOURCE_BUS_ID=1203 \
+java -cp "lib/*:common-1.0.0.jar:bus-simulator-1.0.0.jar" edu.icesi.mio.bus.BusSimulatorApplication
 ```
 
-Regla practica:
-
-- `MIO_SIM_LINE_ID`: ruta que el bus representara en la demo.
-- `MIO_SIM_BUS_ID`: ID unico del bus simulado; no repetirlo entre procesos activos.
-- `MIO_SOURCE_BUS_ID`: bus real del CSV usado como fuente de puntos.
+```bash
+cd /opt/mio
+MIO_SIM_LINE_ID=306 MIO_SIM_BUS_ID=9102 MIO_SOURCE_BUS_ID=190 \
+java -cp "lib/*:common-1.0.0.jar:bus-simulator-1.0.0.jar" edu.icesi.mio.bus.BusSimulatorApplication
+```
 
 ## Orden de arranque
 
-1. Postgres.
+1. Postgres en `mio-datacenter`.
 2. DataCenter.
 3. CCO Server.
 4. Web Gateway.
@@ -178,30 +241,38 @@ Regla practica:
 
 ## Pruebas rapidas
 
-Desde la maquina del frontend o cualquier equipo con acceso:
+Desde cualquier computador con acceso:
 
-```powershell
-Invoke-RestMethod 'http://192.168.1.30:8080/api/routes'
-Invoke-RestMethod 'http://192.168.1.30:8080/api/positions?lineId=306'
-Invoke-RestMethod 'http://192.168.1.30:8080/api/route-details?lineId=306'
+```bash
+curl http://mio-web:8080/api/routes
+curl 'http://mio-web:8080/api/positions?lineId=306'
+curl 'http://mio-web:8080/api/route-details?lineId=306'
 ```
 
-Si `positions` devuelve arreglo vacio, revisar que los buses apunten al CCO correcto:
+Probar resolucion de nombres:
 
-```powershell
-$env:MIO_DATAGRAM_RECEIVER_PROXY
+```bash
+getent hosts mio-datacenter
+getent hosts mio-cco
+getent hosts mio-web
 ```
 
-Si el CCO no conecta al DataCenter, revisar que los proxies apunten a la IP del DataCenter y no a `127.0.0.1`:
+Probar puertos:
 
-```powershell
-$env:MIO_HISTORICAL_PROXY
-$env:MIO_OPERATIONAL_PROXY
+```bash
+nc -vz mio-datacenter 10001
+nc -vz mio-cco 10010
+nc -vz mio-web 8080
+nc -vz mio-web 3000
 ```
 
-## Notas para la sala
+## Overrides opcionales
 
-- No usar `127.0.0.1` entre maquinas; usar siempre la IP LAN de la maquina destino.
-- El CSV grande puede estar en una ruta compartida UNC como `\\PC-SALA\datos\datagrams-MiniPilot.csv`, siempre que el usuario de Windows que ejecuta Java tenga permisos de lectura.
-- Si la red bloquea puertos, permitir `10001`, `10010`, `8080` y `3000` en Firewall de Windows.
-- Si Postgres esta en la misma maquina del DataCenter, `localhost` en `MIO_DB_URL` esta bien. Si Postgres esta en otra maquina, usar la IP de esa maquina.
+Aunque los defaults ya vienen en el JAR, cualquier valor se puede reemplazar con variables de entorno si cambia la sala:
+
+```bash
+MIO_CCO_ENDPOINTS='tcp -h 192.168.1.20 -p 10010' \
+java -cp "lib/*:common-1.0.0.jar:cco-server-1.0.0.jar" edu.icesi.mio.cco.CcoServerApplication
+```
+
+Esto permite usar los mismos JARs tanto con hostnames como con IPs directas.

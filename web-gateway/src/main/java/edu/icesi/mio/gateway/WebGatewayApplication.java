@@ -30,7 +30,7 @@ public final class WebGatewayApplication {
     }
 
     public static void main(String[] args) throws Exception {
-        String ccoEndpoint = Env.value("MIO_CCO_PROXY_ENDPOINT", "tcp -h 127.0.0.1 -p 10010");
+        String ccoEndpoint = Env.value("MIO_CCO_PROXY_ENDPOINT", "tcp -h mio-cco -p 10010");
         int port = Env.intValue("MIO_GATEWAY_PORT", 8080);
 
         Communicator communicator = IceSupport.communicator(args);
@@ -63,7 +63,7 @@ public final class WebGatewayApplication {
             server.stop(0);
             communicator.close();
         }));
-        System.out.println("Web gateway listo en http://127.0.0.1:" + port);
+        System.out.println("Web gateway listo en http://0.0.0.0:" + port);
     }
 
     private static void respond(HttpExchange exchange, String body) throws IOException {

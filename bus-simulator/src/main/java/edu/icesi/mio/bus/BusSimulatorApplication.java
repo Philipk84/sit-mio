@@ -24,9 +24,10 @@ public final class BusSimulatorApplication {
     }
 
     public static void main(String[] args) throws Exception {
-        Path datagramsFile = resolveDatagramsFile(Env.value("MIO_BUS_DATAGRAMS_FILE", "datagrams-MiniPilot.csv"));
+        Path datagramsFile = resolveDatagramsFile(Env.value("MIO_BUS_DATAGRAMS_FILE",
+                "/mnt/mio-datos/datagrams-MiniPilot.csv"));
         String ccoProxy = Env.value("MIO_DATAGRAM_RECEIVER_PROXY",
-                "DatagramReceiver:tcp -h 127.0.0.1 -p 10010");
+                "DatagramReceiver:tcp -h mio-cco -p 10010");
         int delayMs = Env.intValue("MIO_BUS_DELAY_MS", 250);
         int limit = Env.intValue("MIO_BUS_LIMIT", 0);
         boolean loop = Env.booleanValue("MIO_BUS_LOOP", true);
