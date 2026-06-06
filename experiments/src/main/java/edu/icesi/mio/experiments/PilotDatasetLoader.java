@@ -2,7 +2,6 @@ package edu.icesi.mio.experiments;
 
 import Mio.Datagram;
 import Mio.Position;
-import Mio.Route;
 import edu.icesi.mio.common.CsvDatagramParser;
 import edu.icesi.mio.common.CsvRouteParser;
 import edu.icesi.mio.common.Env;
